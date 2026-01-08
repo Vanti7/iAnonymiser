@@ -7,6 +7,21 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.1.0] - 2025-01-08
+
+### ✨ Nouveautés
+
+#### Affichage de la version dans l'interface
+- Ajout d'un badge de version dans le header de l'application
+- Permet de vérifier facilement que l'application est à jour
+
+
+### 🔧 Technique
+
+- Ajout de la constante `VERSION` dans `app.py` pour centraliser la gestion de version
+
+---
+
 ## [2.0.0] - 2025-01-08
 
 ### ✨ Nouveautés

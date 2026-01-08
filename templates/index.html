@@ -103,6 +103,18 @@
             background-clip: text;
         }
 
+        .version-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--accent-cyan);
+            background: rgba(57, 197, 207, 0.15);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid rgba(57, 197, 207, 0.3);
+            align-self: center;
+        }
+
         .tagline {
             color: var(--text-secondary);
             font-size: 0.9rem;
@@ -773,6 +785,7 @@
             <div class="logo">
                 <div class="logo-icon">🔐</div>
                 <h1>iAnonymiser</h1>
+                <span class="version-badge">v{{ version }}</span>
             </div>
             <p class="tagline">Protégez vos données sensibles avant de les partager avec l'IA</p>
         </header>

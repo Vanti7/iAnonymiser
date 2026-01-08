@@ -8,6 +8,9 @@ from anonymizer import Anonymizer, PatternType, anonymize_text, get_presets, PAT
 import io
 import json
 
+# Version de l'application
+VERSION = "2.1.0"
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB max
 
@@ -31,7 +34,7 @@ def index():
         {"id": k, "name": v["name"], "description": v["description"]}
         for k, v in PRESETS.items()
     ]
-    return render_template('index.html', pattern_types=pattern_types, presets=presets)
+    return render_template('index.html', pattern_types=pattern_types, presets=presets, version=VERSION)
 
 
 @app.route('/preview', methods=['POST'])
