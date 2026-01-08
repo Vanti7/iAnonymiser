@@ -1,0 +1,16 @@
+{
+    "id": "apache",
+    "name": "Apache / Nginx",
+    "description": "Logs de serveurs web Apache et Nginx",
+    "patterns": [
+        "ipv4", "ipv6", "url", "hostname", "email", "username"
+    ],
+    "preserve": ["localhost", "127.0.0.1"],
+    "custom_patterns": [
+        {
+            "regex": "\"[A-Z]+ ([^\"]+) HTTP/[0-9.]+\"",
+            "prefix": "REQUEST"
+        }
+    ]
+}
+

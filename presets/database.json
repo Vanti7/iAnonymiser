@@ -1,0 +1,16 @@
+{
+    "id": "database",
+    "name": "Base de données",
+    "description": "Logs SQL et bases de données",
+    "patterns": [
+        "ipv4", "email", "hostname", "uuid", "connection_string", "api_key"
+    ],
+    "preserve": ["localhost"],
+    "custom_patterns": [
+        {
+            "regex": "(?:mysql|postgresql|mongodb|redis)://[^\\s]+",
+            "prefix": "DBURL"
+        }
+    ]
+}
+

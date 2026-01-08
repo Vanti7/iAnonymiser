@@ -1,0 +1,13 @@
+{
+    "id": "default",
+    "name": "Par défaut",
+    "description": "Configuration standard pour la plupart des logs",
+    "patterns": [
+        "ipv4", "ipv6", "email", "hostname", "url", "uuid", "mac", 
+        "phone", "api_key", "jwt", "username", "server_name", 
+        "path_unix", "path_windows"
+    ],
+    "preserve": ["localhost", "127.0.0.1", "::1"],
+    "custom_patterns": []
+}
+

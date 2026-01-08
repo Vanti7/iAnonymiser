@@ -1,0 +1,17 @@
+{
+    "id": "ansible",
+    "name": "Ansible / Infrastructure",
+    "description": "Logs Ansible, SSH et outils d'infrastructure",
+    "patterns": [
+        "ipv4", "ipv6", "hostname", "path_unix", "username", 
+        "server_name", "api_key", "email"
+    ],
+    "preserve": ["localhost", "127.0.0.1"],
+    "custom_patterns": [
+        {
+            "regex": "(?:PLAY|TASK)\\s+\\[([^\\]]+)\\]",
+            "prefix": "TASK"
+        }
+    ]
+}
+

@@ -7,6 +7,65 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [3.0.0] - 2025-01-08
+
+### 🏗️ Refactorisation majeure - Architecture modulaire
+
+Le code a été entièrement réorganisé pour une meilleure maintenabilité et extensibilité.
+
+#### Nouvelle structure
+```
+ianonymiser/
+├── app.py                      # Point d'entrée Flask
+├── core/                       # Moteur d'anonymisation
+│   ├── models.py               # Enums et Dataclasses
+│   └── anonymizer.py           # Classe Anonymizer
+├── patterns/                   # Patterns de détection
+│   ├── base.py                 # Regex et préfixes
+│   └── colors.py               # Couleurs highlighting
+├── presets/                    # Presets en JSON
+│   ├── loader.py               # Chargeur dynamique
+│   ├── default.json
+│   ├── ansible.json
+│   ├── apache.json
+│   ├── aws.json
+│   ├── database.json
+│   ├── kubernetes.json
+│   ├── minimal.json
+│   ├── security.json
+│   └── preset.json.example     # Template pour créer un preset
+├── api/                        # Routes API Flask
+│   └── routes.py
+└── config/                     # Configuration
+    └── settings.py
+```
+
+### ✨ Nouveautés
+
+#### Presets externalisés en JSON
+- Tous les presets sont maintenant des fichiers JSON indépendants dans `presets/`
+- Ajout de `preset.json.example` comme template pour créer ses propres presets
+- Chargement dynamique des presets au démarrage
+- Possibilité d'ajouter des presets personnalisés sans modifier le code
+
+#### Architecture améliorée
+- **Séparation des responsabilités** : core, patterns, presets, api, config
+- **Factory pattern** pour l'application Flask (`create_app()`)
+- **Blueprint Flask** pour les routes API
+- **Lazy loading** des presets pour de meilleures performances
+
+### 🔄 Compatibilité
+
+- L'API REST reste inchangée
+- Les imports doivent utiliser la nouvelle structure modulaire
+
+### 📝 Documentation
+
+- Mise à jour du README avec la nouvelle architecture
+- Ajout de `preset.json.example` comme référence
+
+---
+
 ## [2.1.0] - 2025-01-08
 
 ### ✨ Nouveautés

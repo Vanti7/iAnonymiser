@@ -1,0 +1,36 @@
+{
+    "id": "aws",
+    "name": "AWS CloudWatch",
+    "description": "Logs AWS et CloudWatch",
+    "patterns": [
+        "ipv4", "email", "url", "api_key", "hostname"
+    ],
+    "preserve": ["amazonaws.com"],
+    "custom_patterns": [
+        {
+            "regex": "arn:aws:[a-z0-9-]+:[a-z0-9-]*:[0-9]*:[a-zA-Z0-9-_/]+",
+            "prefix": "ARN"
+        },
+        {
+            "regex": "i-[0-9a-f]{8,17}",
+            "prefix": "EC2"
+        },
+        {
+            "regex": "sg-[0-9a-f]+",
+            "prefix": "SG"
+        },
+        {
+            "regex": "vpc-[0-9a-f]+",
+            "prefix": "VPC"
+        },
+        {
+            "regex": "subnet-[0-9a-f]+",
+            "prefix": "SUBNET"
+        },
+        {
+            "regex": "AKIA[0-9A-Z]{16}",
+            "prefix": "AKID"
+        }
+    ]
+}
+
