@@ -2,38 +2,44 @@
 
 Application web pour anonymiser vos logs, fichiers de configuration et autres données sensibles avant de les partager avec une IA.
 
-![Version](https://img.shields.io/badge/version-2.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.12+-green)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
+
+> 📋 Voir le [CHANGELOG](CHANGELOG.md) pour l'historique des versions
 
 ## ✨ Fonctionnalités
 
 ### Détection automatique
-- **Adresses IP** (IPv4 et IPv6)
+- **Adresses IP** (IPv4 et IPv6 - toutes formes compressées)
 - **Adresses email**
-- **Noms de domaine / hostnames**
+- **Noms de domaine / hostnames** (TLDs étendus)
 - **URLs**
 - **Chemins de fichiers** (Windows et Unix)
 - **UUIDs**
 - **Adresses MAC**
-- **Numéros de téléphone** (FR et US)
-- **Clés API / Tokens / JWT**
-- **Numéros de carte bancaire**
+- **Numéros de téléphone** (internationaux - FR, US, et plus)
+- **Clés API / Tokens / JWT** (OpenAI, GitHub, Slack, Google...)
+- **Numéros de carte bancaire** (avec validation Luhn)
 - **IBAN**
-- **Numéros de sécurité sociale**
+- **Numéros de sécurité sociale** (FR et US)
 - **Clés privées**
 - **Connection strings**
 - **Dates**
+- **Noms d'utilisateurs** (u=xxx, user@ip, etc.) 🆕
+- **Noms de serveurs** (patterns Ansible, K8s, etc.) 🆕
 
 ### Fonctionnalités avancées
 - 🔍 **Preview en temps réel** avec highlighting coloré
-- 📦 **7 Presets prédéfinis** (Apache, K8s, AWS, etc.)
+- 📦 **8 Presets prédéfinis** (Ansible, Apache, K8s, AWS, etc.)
 - 👁️ **Vue côte-à-côte** ou empilée
 - 💾 **Sauvegarde de session** persistante
 - 🔄 **Anonymisation cohérente** (même valeur = même placeholder)
 - ⚙️ **Patterns personnalisés** (regex)
 - 🛡️ **Liste de préservation**
 - 📥 **Export JSON/TXT** des mappings
+- ⚡ **Regex précompilées** pour des performances optimales
+- 🎯 **Système de priorité** intelligent pour éviter les faux positifs
 
 ---
 
@@ -133,9 +139,10 @@ Ouvrez [http://localhost:5000](http://localhost:5000)
 
 | Preset | Description | Patterns activés |
 |--------|-------------|------------------|
-| **Par défaut** | Configuration standard | IPs, emails, URLs, UUIDs, tokens... |
-| **Apache/Nginx** | Logs serveurs web | IPs, URLs, hostnames |
-| **Kubernetes** | Logs K8s et Docker | IPs, pods, namespaces, hostnames |
+| **Par défaut** | Configuration standard | IPs, emails, URLs, UUIDs, tokens, usernames, serveurs... |
+| **Ansible** 🆕 | Logs Ansible/SSH/Infrastructure | IPs, hostnames, chemins, usernames, serveurs |
+| **Apache/Nginx** | Logs serveurs web | IPs, URLs, hostnames, usernames |
+| **Kubernetes** | Logs K8s et Docker | IPs, pods, namespaces, hostnames, serveurs |
 | **AWS CloudWatch** | Logs AWS | ARN, EC2, SG, VPC, access keys |
 | **Base de données** | Logs SQL | IPs, connection strings, hostnames |
 | **Audit Sécurité** | Mode paranoïaque | TOUS les patterns |
@@ -190,6 +197,7 @@ ianonymiser/
 ├── Dockerfile          # Image Docker
 ├── docker-compose.yml  # Orchestration
 ├── requirements.txt    # Dépendances Python
+├── CHANGELOG.md        # Historique des versions
 └── README.md
 ```
 
