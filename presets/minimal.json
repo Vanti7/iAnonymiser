@@ -1,0 +1,11 @@
+{
+    "id": "minimal",
+    "name": "Minimal",
+    "description": "Seulement IPs et emails",
+    "patterns": [
+        "ipv4", "ipv6", "email"
+    ],
+    "preserve": ["localhost", "127.0.0.1"],
+    "custom_patterns": []
+}
+

@@ -1,0 +1,13 @@
+{
+    "id": "security",
+    "name": "Audit Sécurité",
+    "description": "Mode paranoïaque - détecte tout",
+    "patterns": [
+        "ipv4", "ipv6", "email", "hostname", "url", "path_windows", "path_unix",
+        "uuid", "mac", "phone", "api_key", "jwt", "credit_card", "date",
+        "username", "server_name", "iban", "ssn", "private_key", "connection_string"
+    ],
+    "preserve": [],
+    "custom_patterns": []
+}
+

@@ -2,7 +2,7 @@
 
 Application web pour anonymiser vos logs, fichiers de configuration et autres données sensibles avant de les partager avec une IA.
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue)
+![Version](https://img.shields.io/badge/version-3.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.12+-green)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 
@@ -162,7 +162,8 @@ Ouvrez [http://localhost:5000](http://localhost:5000)
 ## 🔧 Utilisation CLI
 
 ```python
-from anonymizer import anonymize_text, Anonymizer
+from core import Anonymizer, PatternType
+from core.anonymizer import anonymize_text
 
 # Utilisation simple
 result = anonymize_text("""
@@ -190,16 +191,62 @@ original = anon.deanonymize(result.anonymized_text)
 
 ```
 ianonymiser/
-├── app.py              # Application Flask
-├── anonymizer.py       # Moteur d'anonymisation
+├── app.py                      # Point d'entrée Flask
+│
+├── core/                       # 🧠 Moteur d'anonymisation
+│   ├── models.py               # Enums (PatternType) et Dataclasses
+│   └── anonymizer.py           # Classe Anonymizer principale
+│
+├── patterns/                   # 🔍 Patterns de détection
+│   ├── base.py                 # Regex par défaut et préfixes
+│   └── colors.py               # Couleurs pour le highlighting
+│
+├── presets/                    # ⚙️ Presets en JSON
+│   ├── loader.py               # Chargeur dynamique de presets
+│   ├── default.json            # Preset par défaut
+│   ├── ansible.json            # Preset Ansible/Infrastructure
+│   ├── apache.json             # Preset Apache/Nginx
+│   ├── aws.json                # Preset AWS CloudWatch
+│   ├── database.json           # Preset Base de données
+│   ├── kubernetes.json         # Preset Kubernetes
+│   ├── minimal.json            # Preset minimal
+│   ├── security.json           # Preset Audit Sécurité
+│   └── preset.json.example     # Template pour créer un preset
+│
+├── api/                        # 🌐 Routes API Flask
+│   └── routes.py
+│
+├── config/                     # 📝 Configuration
+│   └── settings.py             # VERSION, Config classes
+│
 ├── templates/
-│   └── index.html      # Interface web
-├── Dockerfile          # Image Docker
-├── docker-compose.yml  # Orchestration
-├── requirements.txt    # Dépendances Python
-├── CHANGELOG.md        # Historique des versions
+│   └── index.html              # Interface web
+│
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── CHANGELOG.md
 └── README.md
 ```
+
+### Créer un preset personnalisé
+
+Créez un fichier JSON dans `presets/` en suivant ce template :
+
+```json
+{
+    "id": "mon_preset",
+    "name": "Mon Preset",
+    "description": "Description du preset",
+    "patterns": ["ipv4", "email", "hostname"],
+    "preserve": ["localhost"],
+    "custom_patterns": [
+        {"regex": "MON-PATTERN-[0-9]+", "prefix": "CUSTOM"}
+    ]
+}
+```
+
+Le preset sera automatiquement chargé au prochain démarrage.
 
 ---
 
