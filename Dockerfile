@@ -7,7 +7,7 @@ FROM python:3.12-slim
 # Métadonnées
 LABEL maintainer="folivanti"
 LABEL description="Application d'anonymisation de logs et fichiers sensibles"
-LABEL version="2.0"
+LABEL version="3.0"
 
 # Variables d'environnement
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -36,8 +36,12 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir gunicorn
 
 # Copier le code source
-COPY anonymizer.py .
 COPY app.py .
+COPY core/ core/
+COPY patterns/ patterns/
+COPY presets/ presets/
+COPY api/ api/
+COPY config/ config/
 COPY templates/ templates/
 
 # Changer les permissions
