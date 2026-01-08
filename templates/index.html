@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iAnonymiser - Anonymisation de Logs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #11161d;
+            --bg-tertiary: #1a1f2a;
+            --bg-card: #141922;
+            --accent-cyan: #39c5cf;
+            --accent-cyan-glow: rgba(57, 197, 207, 0.3);
+            --accent-magenta: #f85e9f;
+            --accent-magenta-glow: rgba(248, 94, 159, 0.3);
+            --accent-gold: #ffb454;
+            --accent-green: #7fd962;
+            --accent-purple: #da77f2;
+            --text-primary: #e6e6e6;
+            --text-secondary: #8b949e;
+            --text-muted: #525860;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(57, 197, 207, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 20%, rgba(57, 197, 207, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(248, 94, 159, 0.06) 0%, transparent 50%),
+                repeating-linear-gradient(0deg, transparent, transparent 100px, rgba(255, 255, 255, 0.01) 100px, rgba(255, 255, 255, 0.01) 101px),
+                repeating-linear-gradient(90deg, transparent, transparent 100px, rgba(255, 255, 255, 0.01) 100px, rgba(255, 255, 255, 0.01) 101px);
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 20px var(--accent-cyan-glow);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 300;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: var(--bg-card);
+            padding: 0.5rem 0.75rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .toolbar-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preset-select {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            min-width: 140px;
+        }
+
+        .preset-select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .mode-toggle {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .mode-btn {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .mode-btn:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        /* Main Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr 300px;
+            gap: 1rem;
+            animation: fadeIn 0.8s ease-out 0.3s both;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-glow);
+        }
+
+        .card-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title::before {
+            content: '';
+            width: 3px;
+            height: 12px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+        }
+
+        /* Sidebar */
+        .sidebar-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .pattern-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .pattern-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .pattern-list::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+        }
+
+        .pattern-list::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 2px;
+        }
+
+        .pattern-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+        }
+
+        .pattern-item:hover {
+            background: rgba(57, 197, 207, 0.1);
+        }
+
+        .pattern-checkbox {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-muted);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .pattern-checkbox:checked {
+            background: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        .pattern-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--bg-primary);
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .pattern-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .pattern-label {
+            color: var(--text-primary);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pattern-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            background: rgba(57, 197, 207, 0.15);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Editors */
+        .editor-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .editors-container {
+            display: flex;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .editors-container.side-by-side {
+            flex-direction: row;
+        }
+
+        .editors-container.stacked {
+            flex-direction: column;
+        }
+
+        .editor-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 10px 10px 0 0;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+        }
+
+        .editor-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .editor-label .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .input-label .dot { background: var(--accent-gold); }
+        .preview-label .dot { background: var(--accent-purple); }
+        .output-label .dot { background: var(--accent-green); }
+
+        .editor-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .editor-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.3rem 0.6rem;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .editor-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--accent-cyan);
+        }
+
+        textarea, .preview-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 10px 10px;
+            color: var(--text-primary);
+            padding: 0.75rem;
+            resize: none;
+            flex: 1;
+            min-height: 200px;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px var(--accent-cyan-glow);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .preview-box {
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .preview-box .detection {
+            cursor: help;
+            transition: all 0.2s ease;
+        }
+
+        .preview-box .detection:hover {
+            filter: brightness(1.2);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), #2aa3ab);
+            color: var(--bg-primary);
+            box-shadow: 0 4px 15px var(--accent-cyan-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px var(--accent-cyan-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-magenta);
+            box-shadow: 0 4px 15px var(--accent-magenta-glow);
+        }
+
+        .btn-danger {
+            background: rgba(248, 94, 159, 0.15);
+            color: var(--accent-magenta);
+            border: 1px solid var(--accent-magenta);
+        }
+
+        .btn-danger:hover {
+            background: var(--accent-magenta);
+            color: var(--bg-primary);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Sidebar Right */
+        .sidebar-right {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .stat-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 0.6rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .mapping-list {
+            max-height: 280px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .mapping-item {
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 0.5rem 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+        }
+
+        .mapping-placeholder {
+            color: var(--accent-cyan);
+            font-weight: 500;
+        }
+
+        .mapping-arrow {
+            color: var(--text-muted);
+            margin: 0 0.4rem;
+        }
+
+        .mapping-original {
+            color: var(--accent-magenta);
+            word-break: break-all;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Custom Inputs */
+        .custom-input, .preserve-textarea {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 0.5rem 0.6rem;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+
+        .custom-input:focus, .preserve-textarea:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .custom-input::placeholder, .preserve-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .preserve-textarea {
+            min-height: 50px;
+            resize: vertical;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-label-small {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* File Upload */
+        .file-upload {
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(57, 197, 207, 0.05);
+        }
+
+        .file-upload-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .file-upload-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--accent-green);
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Session Management */
+        .session-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Live indicator */
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.7rem;
+            color: var(--accent-green);
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Keyboard shortcuts hint */
+        .shortcuts-hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        kbd {
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .main-grid {
+                grid-template-columns: 220px 1fr 260px;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar-left, .sidebar-right {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .sidebar-left .card, .sidebar-right .card {
+                flex: 1;
+                min-width: 200px;
+            }
+
+            .editors-container.side-by-side {
+                flex-direction: column;
+            }
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--bg-primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .btn.loading .loader {
+            display: block;
+        }
+
+        .btn.loading span {
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">🔐</div>
+                <h1>iAnonymiser</h1>
+            </div>
+            <p class="tagline">Protégez vos données sensibles avant de les partager avec l'IA</p>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <span class="toolbar-label">Preset</span>
+                <select class="preset-select" id="presetSelect" onchange="loadPreset()">
+                    <option value="">-- Personnalisé --</option>
+                    {% for preset in presets %}
+                    <option value="{{ preset.id }}" title="{{ preset.description }}">{{ preset.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="toolbar-group">
+                <span class="toolbar-label">Vue</span>
+                <div class="mode-toggle">
+                    <button class="mode-btn active" data-mode="stacked" onclick="setViewMode('stacked')">Empilée</button>
+                    <button class="mode-btn" data-mode="side-by-side" onclick="setViewMode('side-by-side')">Côte à côte</button>
+                </div>
+            </div>
+
+            <div class="toolbar-group">
+                <span class="toolbar-label">Session</span>
+                <div class="session-buttons">
+                    <button class="btn btn-sm btn-secondary" onclick="saveSession()">💾 Sauver</button>
+                    <button class="btn btn-sm btn-secondary" onclick="loadSavedSession()">📂 Charger</button>
+                </div>
+            </div>
+
+            <div class="toolbar-group">
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    Preview en direct
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Sidebar gauche -->
+            <aside class="sidebar-left">
+                <div class="card">
+                    <h3 class="card-title">Patterns de détection</h3>
+                    <div class="pattern-list" id="patternList">
+                        {% for pattern in pattern_types %}
+                        <label class="pattern-item">
+                            <input type="checkbox" class="pattern-checkbox" 
+                                   value="{{ pattern.id }}" 
+                                   data-color="{{ pattern.color }}"
+                                   {% if pattern.enabled %}checked{% endif %}
+                                   onchange="updatePreview()">
+                            <span class="pattern-color" style="background-color: {{ pattern.color }}"></span>
+                            <span class="pattern-label">{{ pattern.name }}</span>
+                            <span class="pattern-count" id="count-{{ pattern.id }}">0</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">Valeurs à préserver</h3>
+                    <div class="input-group">
+                        <span class="input-label-small">Une valeur par ligne</span>
+                        <textarea class="preserve-textarea" id="preserveValues" 
+                                  placeholder="localhost&#10;127.0.0.1"
+                                  onchange="updatePreview()"></textarea>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">Pattern personnalisé</h3>
+                    <div class="input-group">
+                        <span class="input-label-small">Expression régulière</span>
+                        <input type="text" class="custom-input" id="customRegex" 
+                               placeholder="ex: SRV-[A-Z0-9]+"
+                               onchange="updatePreview()">
+                    </div>
+                    <div class="input-group">
+                        <span class="input-label-small">Préfixe</span>
+                        <input type="text" class="custom-input" id="customPrefix" 
+                               placeholder="ex: SERVER"
+                               onchange="updatePreview()">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="file-upload" id="fileUpload">
+                        <div class="file-upload-icon">📁</div>
+                        <div class="file-upload-text">Glissez un fichier ou <strong>cliquez</strong></div>
+                        <input type="file" id="fileInput" accept=".txt,.log,.json,.xml,.csv,.yaml,.yml">
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Zone centrale -->
+            <main class="editor-section">
+                <div class="editors-container stacked" id="editorsContainer">
+                    <!-- Input -->
+                    <div class="editor-wrapper">
+                        <div class="editor-header">
+                            <span class="editor-label input-label">
+                                <span class="dot"></span>
+                                Texte original
+                            </span>
+                            <div class="editor-actions">
+                                <button class="editor-btn" onclick="clearInput()">Effacer</button>
+                                <button class="editor-btn" onclick="pasteFromClipboard()">Coller</button>
+                            </div>
+                        </div>
+                        <textarea id="inputText" placeholder="Collez ici vos logs, fichiers de configuration ou tout texte contenant des données sensibles..."></textarea>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="editor-wrapper" id="previewWrapper">
+                        <div class="editor-header">
+                            <span class="editor-label preview-label">
+                                <span class="dot"></span>
+                                Preview (détections)
+                                <span id="detectionCount" style="font-family: 'JetBrains Mono'; color: var(--accent-purple); margin-left: 0.5rem;">0 trouvé(s)</span>
+                            </span>
+                        </div>
+                        <div class="preview-box" id="previewBox"></div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="anonymizeBtn" onclick="anonymize()">
+                        <span>🔒 Anonymiser</span>
+                        <div class="loader"></div>
+                    </button>
+                    <button class="btn btn-secondary" onclick="deanonymize()">
+                        <span>🔓 Restaurer</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="copyOutput()">
+                        <span>📋 Copier résultat</span>
+                    </button>
+                    <button class="btn btn-danger" onclick="resetMappings()">
+                        <span>🗑️ Reset</span>
+                    </button>
+                </div>
+
+                <!-- Output -->
+                <div class="editor-wrapper">
+                    <div class="editor-header">
+                        <span class="editor-label output-label">
+                            <span class="dot"></span>
+                            Texte anonymisé
+                        </span>
+                        <div class="editor-actions">
+                            <button class="editor-btn" onclick="downloadOutput()">Télécharger</button>
+                        </div>
+                    </div>
+                    <textarea id="outputText" readonly placeholder="Le texte anonymisé apparaîtra ici..."></textarea>
+                </div>
+
+                <p class="shortcuts-hint">
+                    <kbd>Ctrl</kbd> + <kbd>Enter</kbd> Anonymiser &nbsp;|&nbsp;
+                    <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> Copier résultat
+                </p>
+            </main>
+
+            <!-- Sidebar droite -->
+            <aside class="sidebar-right">
+                <div class="card">
+                    <h3 class="card-title">Statistiques</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalReplacements">0</div>
+                            <div class="stat-label">Remplacements</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="uniqueValues">0</div>
+                            <div class="stat-label">Uniques</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="flex: 1;">
+                    <h3 class="card-title">Table des mappings</h3>
+                    <div class="mapping-list" id="mappingList">
+                        <div class="empty-state">
+                            Anonymisez du texte pour voir<br>les correspondances
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                        <button class="btn btn-sm btn-secondary" style="flex: 1;" onclick="exportMappings('json')">
+                            📥 JSON
+                        </button>
+                        <button class="btn btn-sm btn-secondary" style="flex: 1;" onclick="exportMappings('text')">
+                            📥 TXT
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // État
+        let currentMappings = [];
+        let previewTimeout = null;
+        let lastSessionState = null;
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            // Charger la session précédente si elle existe
+            const savedSession = localStorage.getItem('ianonymiser_session');
+            if (savedSession) {
+                try {
+                    lastSessionState = JSON.parse(savedSession);
+                } catch (e) {}
+            }
+
+            // Preview en temps réel
+            const inputText = document.getElementById('inputText');
+            inputText.addEventListener('input', debounce(updatePreview, 300));
+        });
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function getEnabledPatterns() {
+            const checkboxes = document.querySelectorAll('#patternList .pattern-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function getCustomPatterns() {
+            const regex = document.getElementById('customRegex').value.trim();
+            const prefix = document.getElementById('customPrefix').value.trim() || 'CUSTOM';
+            if (regex) {
+                return [{ regex, prefix }];
+            }
+            return [];
+        }
+
+        function getPreserveValues() {
+            const text = document.getElementById('preserveValues').value;
+            return text.split('\n').map(v => v.trim()).filter(v => v);
+        }
+
+        // Preview en temps réel
+        async function updatePreview() {
+            const inputText = document.getElementById('inputText').value;
+            const previewBox = document.getElementById('previewBox');
+            
+            if (!inputText.trim()) {
+                previewBox.innerHTML = '<span style="color: var(--text-muted)">Le preview apparaîtra ici...</span>';
+                document.getElementById('detectionCount').textContent = '0 trouvé(s)';
+                resetPatternCounts();
+                return;
+            }
+
+            try {
+                const response = await fetch('/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: inputText,
+                        enabled_patterns: getEnabledPatterns(),
+                        custom_patterns: getCustomPatterns(),
+                        preserve_values: getPreserveValues()
+                    })
+                });
+
+                const data = await response.json();
+                previewBox.innerHTML = data.highlighted_html || '<span style="color: var(--text-muted)">Aucune donnée sensible détectée</span>';
+                document.getElementById('detectionCount').textContent = `${data.detection_count} trouvé(s)`;
+                
+                // Mettre à jour les compteurs par pattern
+                updatePatternCounts(data.stats);
+            } catch (error) {
+                console.error('Preview error:', error);
+            }
+        }
+
+        function resetPatternCounts() {
+            document.querySelectorAll('.pattern-count').forEach(el => {
+                el.textContent = '0';
+            });
+        }
+
+        function updatePatternCounts(stats) {
+            resetPatternCounts();
+            for (const [type, count] of Object.entries(stats)) {
+                const el = document.getElementById(`count-${type}`);
+                if (el) {
+                    el.textContent = count;
+                }
+            }
+        }
+
+        // Anonymiser
+        async function anonymize() {
+            const btn = document.getElementById('anonymizeBtn');
+            const inputText = document.getElementById('inputText').value;
+            
+            if (!inputText.trim()) {
+                showToast('Veuillez entrer du texte à anonymiser', 'warning');
+                return;
+            }
+
+            btn.classList.add('loading');
+
+            try {
+                const response = await fetch('/anonymize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: inputText,
+                        enabled_patterns: getEnabledPatterns(),
+                        custom_patterns: getCustomPatterns(),
+                        preserve_values: getPreserveValues(),
+                        reset_mappings: false
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById('outputText').value = data.anonymized_text;
+                updateStats(data);
+                updateMappings(data.mappings);
+                
+                // Sauvegarder l'état de session
+                if (data.session_state) {
+                    lastSessionState = data.session_state;
+                    localStorage.setItem('ianonymiser_session', JSON.stringify(data.session_state));
+                }
+                
+                showToast(`${data.total_replacements} éléments anonymisés!`);
+            } catch (error) {
+                showToast('Erreur lors de l\'anonymisation', 'error');
+                console.error(error);
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+
+        // Dé-anonymiser
+        async function deanonymize() {
+            const outputText = document.getElementById('outputText').value;
+            
+            if (!outputText.trim()) {
+                showToast('Aucun texte à restaurer', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/deanonymize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: outputText })
+                });
+
+                const data = await response.json();
+                document.getElementById('inputText').value = data.original_text;
+                updatePreview();
+                showToast('Texte restauré!');
+            } catch (error) {
+                showToast('Erreur lors de la restauration', 'error');
+            }
+        }
+
+        // Reset
+        async function resetMappings() {
+            try {
+                await fetch('/reset', { method: 'POST' });
+                currentMappings = [];
+                updateMappings([]);
+                document.getElementById('totalReplacements').textContent = '0';
+                document.getElementById('uniqueValues').textContent = '0';
+                localStorage.removeItem('ianonymiser_session');
+                showToast('Mappings réinitialisés');
+            } catch (error) {
+                showToast('Erreur lors de la réinitialisation', 'error');
+            }
+        }
+
+        // Charger un preset
+        async function loadPreset() {
+            const preset = document.getElementById('presetSelect').value;
+            if (!preset) return;
+
+            try {
+                const response = await fetch('/load-preset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preset })
+                });
+
+                const data = await response.json();
+                
+                // Mettre à jour les checkboxes
+                document.querySelectorAll('.pattern-checkbox').forEach(cb => {
+                    cb.checked = data.enabled_patterns.includes(cb.value);
+                });
+
+                // Mettre à jour les valeurs à préserver
+                document.getElementById('preserveValues').value = data.preserve_values.join('\n');
+
+                // Mettre à jour les patterns personnalisés
+                if (data.custom_patterns && data.custom_patterns.length > 0) {
+                    document.getElementById('customRegex').value = data.custom_patterns[0].regex || '';
+                    document.getElementById('customPrefix').value = data.custom_patterns[0].prefix || '';
+                } else {
+                    document.getElementById('customRegex').value = '';
+                    document.getElementById('customPrefix').value = '';
+                }
+
+                updatePreview();
+                showToast(`Preset "${preset}" chargé`);
+            } catch (error) {
+                showToast('Erreur lors du chargement du preset', 'error');
+            }
+        }
+
+        // Mode de vue
+        function setViewMode(mode) {
+            const container = document.getElementById('editorsContainer');
+            container.className = `editors-container ${mode}`;
+            
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+        }
+
+        // Session
+        function saveSession() {
+            if (lastSessionState) {
+                localStorage.setItem('ianonymiser_session', JSON.stringify(lastSessionState));
+                showToast('Session sauvegardée!');
+            } else {
+                showToast('Aucune session à sauvegarder', 'warning');
+            }
+        }
+
+        async function loadSavedSession() {
+            const saved = localStorage.getItem('ianonymiser_session');
+            if (!saved) {
+                showToast('Aucune session sauvegardée', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/load-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_state: JSON.parse(saved) })
+                });
+
+                const data = await response.json();
+                updateMappings(data.mappings);
+                showToast('Session restaurée!');
+            } catch (error) {
+                showToast('Erreur lors du chargement', 'error');
+            }
+        }
+
+        // Stats & Mappings
+        function updateStats(data) {
+            document.getElementById('totalReplacements').textContent = data.total_replacements;
+            document.getElementById('uniqueValues').textContent = data.mappings.length;
+        }
+
+        function updateMappings(mappings) {
+            currentMappings = mappings;
+            const container = document.getElementById('mappingList');
+            
+            if (!mappings.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        Anonymisez du texte pour voir<br>les correspondances
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = mappings.map(([placeholder, original]) => `
+                <div class="mapping-item">
+                    <span class="mapping-placeholder">${escapeHtml(placeholder)}</span>
+                    <span class="mapping-arrow">→</span>
+                    <span class="mapping-original">${escapeHtml(original)}</span>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Toast
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.borderColor = type === 'error' ? 'var(--accent-magenta)' : 
+                                      type === 'warning' ? 'var(--accent-gold)' : 
+                                      'var(--accent-green)';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Actions
+        function copyOutput() {
+            const output = document.getElementById('outputText');
+            if (!output.value) {
+                showToast('Aucun texte à copier', 'warning');
+                return;
+            }
+            navigator.clipboard.writeText(output.value).then(() => {
+                showToast('Copié!');
+            });
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('inputText').value = text;
+                updatePreview();
+                showToast('Texte collé!');
+            } catch (error) {
+                showToast('Impossible d\'accéder au presse-papiers', 'error');
+            }
+        }
+
+        function clearInput() {
+            document.getElementById('inputText').value = '';
+            updatePreview();
+        }
+
+        function downloadOutput() {
+            const output = document.getElementById('outputText').value;
+            if (!output) {
+                showToast('Aucun texte à télécharger', 'warning');
+                return;
+            }
+            
+            const blob = new Blob([output], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'anonymized_output.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Fichier téléchargé!');
+        }
+
+        function exportMappings(format) {
+            window.location.href = `/export-mappings?format=${format}`;
+        }
+
+        // File Upload
+        const fileUpload = document.getElementById('fileUpload');
+        const fileInput = document.getElementById('fileInput');
+
+        fileUpload.addEventListener('click', () => fileInput.click());
+
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = 'var(--accent-cyan)';
+            fileUpload.style.background = 'rgba(57, 197, 207, 0.1)';
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.style.borderColor = 'var(--border-color)';
+            fileUpload.style.background = 'transparent';
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = 'var(--border-color)';
+            fileUpload.style.background = 'transparent';
+            
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        async function handleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('enabled_patterns', JSON.stringify(getEnabledPatterns()));
+            formData.append('reset_mappings', 'false');
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                document.getElementById('inputText').value = data.original_text;
+                document.getElementById('outputText').value = data.anonymized_text;
+                updateStats(data);
+                updateMappings(data.mappings);
+                updatePreview();
+                showToast(`"${data.filename}" traité!`);
+            } catch (error) {
+                showToast('Erreur lors du traitement', 'error');
+            }
+        }
+
+        // Raccourcis clavier
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                anonymize();
+            }
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                copyOutput();
+            }
+        });
+    </script>
+</body>
+</html>

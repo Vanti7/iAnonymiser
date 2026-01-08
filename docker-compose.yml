@@ -1,0 +1,62 @@
+# ===========================================
+# iAnonymiser - Docker Compose
+# ===========================================
+# 
+# Démarrage rapide:
+#   docker-compose up -d
+#
+# Avec rebuild:
+#   docker-compose up -d --build
+#
+# Voir les logs:
+#   docker-compose logs -f
+#
+# Arrêter:
+#   docker-compose down
+# ===========================================
+
+version: '3.8'
+
+services:
+  ianonymiser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ianonymiser:latest
+    container_name: ianonymiser
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - TZ=Europe/Paris
+    # Limites de ressources (ajuster selon vos besoins)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Labels pour Traefik (optionnel - décommenter si vous utilisez Traefik)
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.ianonymiser.rule=Host(`anonymiser.votredomaine.com`)"
+    #   - "traefik.http.routers.ianonymiser.entrypoints=websecure"
+    #   - "traefik.http.routers.ianonymiser.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.ianonymiser.loadbalancer.server.port=5000"
+
+# Réseau (optionnel - pour intégration avec d'autres services)
+# networks:
+#   default:
+#     name: ianonymiser-network
+#     driver: bridge
+
