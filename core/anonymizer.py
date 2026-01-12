@@ -1,21 +1,38 @@
 """
 Moteur principal d'anonymisation.
 Détecte et remplace les données sensibles de manière cohérente.
+Supporte des enhancers externes (Presidio, tldextract, LLM Guard).
 """
 
 import re
 import json
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 
 from .models import PatternType, Detection, AnonymizationResult, PreviewResult
 from patterns import DEFAULT_PATTERNS, PREFIXES, PATTERN_COLORS
 from presets import PresetLoader
+
+# Import conditionnel des enhancers
+try:
+    from enhancers import (
+        BaseEnhancer, 
+        EnhancerResult,
+        get_enhancer,
+        get_available_enhancers,
+        AVAILABLE_ENHANCERS
+    )
+    ENHANCERS_AVAILABLE = True
+except ImportError:
+    ENHANCERS_AVAILABLE = False
+    BaseEnhancer = None
+    EnhancerResult = None
 
 
 class Anonymizer:
     """
     Moteur principal d'anonymisation.
     Maintient la cohérence des remplacements (même valeur = même placeholder).
+    Supporte des enhancers pour améliorer la détection (Presidio, tldextract, etc.).
     """
     
     # Patterns précompilés (initialisé au premier accès)
@@ -32,8 +49,16 @@ class Anonymizer:
         self.preserve_list: List[str] = []  # Valeurs à ne pas anonymiser
         self._compiled_custom: List[Tuple['re.Pattern', str]] = []  # Patterns custom compilés
         
+        # Enhancers pour détection avancée
+        self._enhancers: Dict[str, Any] = {}
+        self._enhancers_enabled: Dict[str, bool] = {}
+        self._enhancers_config: Dict[str, Dict] = {}
+        
         # Précompiler les patterns au premier usage
         self._ensure_patterns_compiled()
+        
+        # Initialiser les enhancers disponibles
+        self._init_enhancers()
     
     @classmethod
     def _ensure_patterns_compiled(cls):
@@ -48,6 +73,128 @@ class Anonymizer:
                 print(f"Warning: Failed to compile pattern {pattern_type}: {e}")
         
         cls._patterns_compiled = True
+    
+    def _init_enhancers(self):
+        """Initialise les enhancers disponibles."""
+        if not ENHANCERS_AVAILABLE:
+            return
+        
+        # Charger les enhancers disponibles
+        for name in get_available_enhancers():
+            self._enhancers_enabled[name] = False  # Désactivés par défaut
+            self._enhancers_config[name] = {}
+    
+    def set_enhancer_enabled(self, name: str, enabled: bool, config: Dict = None):
+        """
+        Active ou désactive un enhancer.
+        
+        Args:
+            name: Nom de l'enhancer ('presidio', 'tldextract', 'llm_guard')
+            enabled: True pour activer
+            config: Configuration optionnelle
+        """
+        if not ENHANCERS_AVAILABLE:
+            return False
+        
+        if name not in AVAILABLE_ENHANCERS:
+            return False
+        
+        self._enhancers_enabled[name] = enabled
+        
+        if config:
+            self._enhancers_config[name] = config
+        
+        # Créer l'instance si activé et pas encore créée
+        if enabled and name not in self._enhancers:
+            enhancer = get_enhancer(name, self._enhancers_config.get(name, {}))
+            if enhancer and enhancer.is_available():
+                self._enhancers[name] = enhancer
+                return True
+            else:
+                self._enhancers_enabled[name] = False
+                return False
+        
+        return True
+    
+    def get_enhancers_status(self) -> Dict[str, Any]:
+        """
+        Retourne le statut de tous les enhancers.
+        
+        Returns:
+            Dict avec le statut de chaque enhancer
+        """
+        if not ENHANCERS_AVAILABLE:
+            return {"available": False, "enhancers": {}}
+        
+        status = {
+            "available": True,
+            "enhancers": {}
+        }
+        
+        for name in AVAILABLE_ENHANCERS.keys():
+            if name in self._enhancers:
+                status["enhancers"][name] = self._enhancers[name].get_status()
+            else:
+                status["enhancers"][name] = {
+                    "name": name,
+                    "available": name in get_available_enhancers(),
+                    "enabled": self._enhancers_enabled.get(name, False),
+                    "initialized": False
+                }
+        
+        return status
+    
+    def _detect_with_enhancers(self, text: str) -> List[Detection]:
+        """
+        Exécute la détection via les enhancers activés.
+        
+        Args:
+            text: Texte à analyser
+            
+        Returns:
+            Liste des détections des enhancers
+        """
+        if not ENHANCERS_AVAILABLE:
+            return []
+        
+        detections = []
+        
+        for name, enhancer in self._enhancers.items():
+            if not self._enhancers_enabled.get(name, False):
+                continue
+            
+            try:
+                results = enhancer.detect(text)
+                
+                for r in results:
+                    # Convertir EnhancerResult en Detection
+                    pattern_type_str = r.to_pattern_type_str()
+                    try:
+                        pattern_type = PatternType(pattern_type_str)
+                    except ValueError:
+                        pattern_type = PatternType.CUSTOM
+                    
+                    # Vérifier si ce type de pattern est activé
+                    if not self.enabled_patterns.get(pattern_type, True):
+                        continue
+                    
+                    # Vérifier la liste de préservation
+                    if self._should_preserve(r.value):
+                        continue
+                    
+                    det = Detection(
+                        value=r.value,
+                        pattern_type=pattern_type,
+                        start=r.start,
+                        end=r.end
+                    )
+                    detections.append(det)
+                    
+            except Exception as e:
+                print(f"Warning: Enhancer '{name}' error: {e}")
+                continue
+        
+        return detections
         
     def reset(self):
         """Réinitialise les mappings et compteurs."""
@@ -126,6 +273,7 @@ class Anonymizer:
         """
         Détecte toutes les données sensibles sans les remplacer.
         Utilise des patterns précompilés avec système de priorité.
+        Intègre les détections des enhancers si activés.
         """
         detections: List[Detection] = []
         
@@ -177,7 +325,13 @@ class Anonymizer:
         # S'assurer que les patterns sont compilés
         self._ensure_patterns_compiled()
         
-        # Détecter avec les patterns par défaut (précompilés)
+        # 1. D'abord, détecter avec les enhancers (haute priorité)
+        enhancer_detections = self._detect_with_enhancers(text)
+        for det in enhancer_detections:
+            if det.start >= 0 and det.end > det.start:  # Ignorer les détections sans position
+                _check_overlap_and_add(det.start, det.end, det)
+        
+        # 2. Ensuite, détecter avec les patterns par défaut (précompilés)
         for pattern_type in DEFAULT_PATTERNS.keys():
             if not self.enabled_patterns.get(pattern_type, True):
                 continue
@@ -429,6 +583,8 @@ class Anonymizer:
             "enabled_patterns": {k.value: v for k, v in self.enabled_patterns.items()},
             "custom_patterns": self.custom_patterns,
             "preserve_list": self.preserve_list,
+            "enhancers_enabled": self._enhancers_enabled,
+            "enhancers_config": self._enhancers_config,
         }
     
     def load_session_state(self, state: Dict) -> bool:
@@ -444,6 +600,16 @@ class Anonymizer:
                 
             self.custom_patterns = state.get("custom_patterns", [])
             self.preserve_list = state.get("preserve_list", [])
+            
+            # Restaurer l'état des enhancers
+            self._enhancers_enabled = state.get("enhancers_enabled", {})
+            self._enhancers_config = state.get("enhancers_config", {})
+            
+            # Réactiver les enhancers qui étaient activés
+            for name, enabled in self._enhancers_enabled.items():
+                if enabled:
+                    self.set_enhancer_enabled(name, True, self._enhancers_config.get(name))
+            
             return True
         except Exception:
             return False
@@ -481,4 +647,3 @@ def anonymize_text(text: str,
             anonymizer.add_preserve_value(value)
             
     return anonymizer.anonymize(text)
-

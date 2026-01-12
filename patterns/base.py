@@ -39,7 +39,7 @@ DEFAULT_PATTERNS: dict[PatternType, str] = {
         r')(?:/[0-9]{1,3})?',
     
     # Hostname amélioré avec plus de TLDs
-    PatternType.HOSTNAME: r'\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:com|org|net|edu|gov|mil|int|io|fr|de|uk|eu|es|it|nl|be|ch|at|ca|au|nz|jp|cn|kr|br|ru|in|mx|za|local|internal|corp|lan|intra|cloud|app|dev|test|staging|prod|localhost|example|invalid|onion|i2p|bit|eth|crypto|web3|xyz|online|site|tech|info|biz|co|me|tv|cc|ws|mobi|name|pro|aero|coop|museum|travel|jobs|asia|tel|post|arpa|amazonaws|azure|gcp|cloudflare|digitalocean|heroku|vercel|netlify)\b',
+    PatternType.HOSTNAME: r'\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:com|org|net|edu|gov|mil|int|io|fr|de|uk|eu|es|it|nl|be|ch|at|ca|au|nz|jp|cn|kr|br|ru|in|mx|za|local|internal|corp|lan|intra|cloud|app|dev|test|staging|prod|localhost|example|invalid|onion|i2p|bit|eth|crypto|web3|xyz|online|site|tech|info|biz|co|me|tv|cc|ws|mobi|name|pro|aero|coop|museum|travel|jobs|asia|tel|post|arpa|amazonaws|azure|gcp|cloudflare|digitalocean|heroku|vercel|netlify|esx|esxi|vmware|vcenter|vsphere|vsan|hyperv|proxmox|nutanix|citrix|xen)\b',
     
     # MAC Address
     PatternType.MAC_ADDRESS: r'\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b|\b[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}\b',
@@ -62,9 +62,11 @@ DEFAULT_PATTERNS: dict[PatternType, str] = {
         r'\bAIza[A-Za-z0-9_-]{35}\b' \
         r')',
     
-    # Chemins Windows et Unix
-    PatternType.PATH_WINDOWS: r'[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n\s]+\\)*[^\\/:*?"<>|\r\n\s]+',
-    PatternType.PATH_UNIX: r'(?<![A-Za-z0-9])(?:/(?:home|var|etc|usr|opt|tmp|root|mnt|srv|data|app|apps?)/[a-zA-Z0-9._/-]+)',
+    # Chemins Windows - supporte \ simple et \\ double (échappé dans logs/strings)
+    PatternType.PATH_WINDOWS: r'[A-Za-z]:[\\]{1,2}(?:[^\\/:*?"<>|\r\n\s]+[\\]{1,2})*[^\\/:*?"<>|\r\n\s]+',
+    
+    # Chemins Unix - supporte /home, /var, /etc, /vmfs (VMware), etc.
+    PatternType.PATH_UNIX: r'(?<![A-Za-z0-9])(?:/(?:home|var|etc|usr|opt|tmp|root|mnt|srv|data|app|apps?|vmfs)/[a-zA-Z0-9._@%/-]+)',
     
     # Carte de crédit avec espaces/tirets
     PatternType.CREDIT_CARD: r'\b(?:4[0-9]{3}[\s-]?[0-9]{4}[\s-]?[0-9]{4}[\s-]?[0-9]{4}|5[1-5][0-9]{2}[\s-]?[0-9]{4}[\s-]?[0-9]{4}[\s-]?[0-9]{4}|3[47][0-9]{2}[\s-]?[0-9]{6}[\s-]?[0-9]{5}|6(?:011|5[0-9]{2})[\s-]?[0-9]{4}[\s-]?[0-9]{4}[\s-]?[0-9]{4})\b',

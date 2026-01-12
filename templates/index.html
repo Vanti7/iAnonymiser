@@ -710,6 +710,75 @@
             50% { opacity: 0.4; }
         }
 
+        /* View Toggle pour Input/Preview */
+        .view-toggle {
+            display: flex;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .view-toggle-btn {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .view-toggle-btn.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .view-toggle-btn:hover:not(.active) {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        /* Input zone unified */
+        .input-zone {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
+        }
+
+        .input-zone textarea,
+        .input-zone .preview-box {
+            border-radius: 0 0 10px 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .input-zone textarea.active,
+        .input-zone .preview-box.active {
+            position: relative;
+            opacity: 1;
+            pointer-events: auto;
+            height: 100%;
+        }
+
+        .input-zone .preview-box {
+            border-top: none;
+            min-height: 280px;
+        }
+
         /* Keyboard shortcuts hint */
         .shortcuts-hint {
             font-size: 0.7rem;
@@ -803,14 +872,6 @@
             </div>
             
             <div class="toolbar-group">
-                <span class="toolbar-label">Vue</span>
-                <div class="mode-toggle">
-                    <button class="mode-btn active" data-mode="stacked" onclick="setViewMode('stacked')">Empilée</button>
-                    <button class="mode-btn" data-mode="side-by-side" onclick="setViewMode('side-by-side')">Côte à côte</button>
-                </div>
-            </div>
-
-            <div class="toolbar-group">
                 <span class="toolbar-label">Session</span>
                 <div class="session-buttons">
                     <button class="btn btn-sm btn-secondary" onclick="saveSession()">💾 Sauver</button>
@@ -885,31 +946,35 @@
             <!-- Zone centrale -->
             <main class="editor-section">
                 <div class="editors-container stacked" id="editorsContainer">
-                    <!-- Input -->
+                    <!-- Input + Preview combinés -->
                     <div class="editor-wrapper">
                         <div class="editor-header">
                             <span class="editor-label input-label">
-                                <span class="dot"></span>
-                                Texte original
+                                <span class="dot" id="inputDot"></span>
+                                <span id="inputModeLabel">Texte original</span>
+                                <span id="detectionCount" style="font-family: 'JetBrains Mono'; color: var(--accent-purple); margin-left: 0.5rem; display: none;">0 trouvé(s)</span>
                             </span>
                             <div class="editor-actions">
+                                <div class="view-toggle">
+                                    <button class="view-toggle-btn active" data-view="edit" onclick="setInputView('edit')">
+                                        ✏️ Édition
+                                    </button>
+                                    <button class="view-toggle-btn" data-view="preview" onclick="setInputView('preview')">
+                                        👁️ Détection
+                                    </button>
+                                    <button class="view-toggle-btn" data-view="output" onclick="setInputView('output')">
+                                        🔒 Anonymisé
+                                    </button>
+                                </div>
                                 <button class="editor-btn" onclick="clearInput()">Effacer</button>
                                 <button class="editor-btn" onclick="pasteFromClipboard()">Coller</button>
                             </div>
                         </div>
-                        <textarea id="inputText" placeholder="Collez ici vos logs, fichiers de configuration ou tout texte contenant des données sensibles..."></textarea>
-                    </div>
-
-                    <!-- Preview -->
-                    <div class="editor-wrapper" id="previewWrapper">
-                        <div class="editor-header">
-                            <span class="editor-label preview-label">
-                                <span class="dot"></span>
-                                Preview (détections)
-                                <span id="detectionCount" style="font-family: 'JetBrains Mono'; color: var(--accent-purple); margin-left: 0.5rem;">0 trouvé(s)</span>
-                            </span>
+                        <div class="input-zone">
+                            <textarea id="inputText" class="active" placeholder="Collez ici vos logs, fichiers de configuration ou tout texte contenant des données sensibles..."></textarea>
+                            <div class="preview-box" id="previewBox"></div>
+                            <textarea id="outputText" readonly placeholder="Le texte anonymisé apparaîtra ici après avoir cliqué sur Anonymiser..."></textarea>
                         </div>
-                        <div class="preview-box" id="previewBox"></div>
                     </div>
                 </div>
 
@@ -922,25 +987,14 @@
                         <span>🔓 Restaurer</span>
                     </button>
                     <button class="btn btn-secondary" onclick="copyOutput()">
-                        <span>📋 Copier résultat</span>
+                        <span>📋 Copier</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadOutput()">
+                        <span>📥 Télécharger</span>
                     </button>
                     <button class="btn btn-danger" onclick="resetMappings()">
                         <span>🗑️ Reset</span>
                     </button>
-                </div>
-
-                <!-- Output -->
-                <div class="editor-wrapper">
-                    <div class="editor-header">
-                        <span class="editor-label output-label">
-                            <span class="dot"></span>
-                            Texte anonymisé
-                        </span>
-                        <div class="editor-actions">
-                            <button class="editor-btn" onclick="downloadOutput()">Télécharger</button>
-                        </div>
-                    </div>
-                    <textarea id="outputText" readonly placeholder="Le texte anonymisé apparaîtra ici..."></textarea>
                 </div>
 
                 <p class="shortcuts-hint">
@@ -1126,6 +1180,9 @@
                     localStorage.setItem('ianonymiser_session', JSON.stringify(data.session_state));
                 }
                 
+                // Basculer automatiquement vers la vue anonymisée
+                setInputView('output');
+                
                 showToast(`${data.total_replacements} éléments anonymisés!`);
             } catch (error) {
                 showToast('Erreur lors de l\'anonymisation', 'error');
@@ -1153,6 +1210,7 @@
 
                 const data = await response.json();
                 document.getElementById('inputText').value = data.original_text;
+                setInputView('edit'); // Basculer vers l'édition
                 updatePreview();
                 showToast('Texte restauré!');
             } catch (error) {
@@ -1221,6 +1279,48 @@
             document.querySelectorAll('.mode-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.mode === mode);
             });
+        }
+
+        // Toggle Input/Preview/Output
+        let currentInputView = 'edit';
+        
+        function setInputView(view) {
+            currentInputView = view;
+            const inputText = document.getElementById('inputText');
+            const previewBox = document.getElementById('previewBox');
+            const outputText = document.getElementById('outputText');
+            const inputDot = document.getElementById('inputDot');
+            const modeLabel = document.getElementById('inputModeLabel');
+            const detectionCount = document.getElementById('detectionCount');
+            
+            // Reset all
+            inputText.classList.remove('active');
+            previewBox.classList.remove('active');
+            outputText.classList.remove('active');
+            
+            // Update toggle buttons
+            document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === view);
+            });
+            
+            if (view === 'edit') {
+                inputText.classList.add('active');
+                inputDot.style.background = 'var(--accent-gold)';
+                modeLabel.textContent = 'Texte original';
+                detectionCount.style.display = 'none';
+                inputText.focus();
+            } else if (view === 'preview') {
+                previewBox.classList.add('active');
+                inputDot.style.background = 'var(--accent-purple)';
+                modeLabel.textContent = 'Détections';
+                detectionCount.style.display = 'inline';
+                updatePreview();
+            } else if (view === 'output') {
+                outputText.classList.add('active');
+                inputDot.style.background = 'var(--accent-green)';
+                modeLabel.textContent = 'Texte anonymisé';
+                detectionCount.style.display = 'none';
+            }
         }
 
         // Session
@@ -1404,6 +1504,7 @@
                 updateStats(data);
                 updateMappings(data.mappings);
                 updatePreview();
+                setInputView('output'); // Basculer vers le résultat
                 showToast(`"${data.filename}" traité!`);
             } catch (error) {
                 showToast('Erreur lors du traitement', 'error');

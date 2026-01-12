@@ -270,3 +270,75 @@ def list_presets():
     ]
     return jsonify({'presets': presets})
 
+
+# ==========================================
+# Routes pour les Enhancers
+# ==========================================
+
+@api_bp.route('/enhancers', methods=['GET'])
+def list_enhancers():
+    """Liste tous les enhancers et leur statut."""
+    global current_anonymizer
+    
+    status = current_anonymizer.get_enhancers_status()
+    
+    return jsonify(status)
+
+
+@api_bp.route('/enhancers/<name>', methods=['POST'])
+def configure_enhancer(name: str):
+    """Configure et active/désactive un enhancer."""
+    global current_anonymizer
+    
+    data = request.get_json()
+    enabled = data.get('enabled', False)
+    config = data.get('config', {})
+    
+    success = current_anonymizer.set_enhancer_enabled(name, enabled, config)
+    
+    return jsonify({
+        'status': 'ok' if success else 'error',
+        'enhancer': name,
+        'enabled': enabled,
+        'message': f"Enhancer '{name}' {'activé' if enabled else 'désactivé'}" if success else f"Enhancer '{name}' non disponible"
+    })
+
+
+@api_bp.route('/enhancers/enable-all', methods=['POST'])
+def enable_all_enhancers():
+    """Active tous les enhancers disponibles."""
+    global current_anonymizer
+    
+    data = request.get_json() or {}
+    config = data.get('config', {})
+    
+    status = current_anonymizer.get_enhancers_status()
+    enabled_list = []
+    
+    for name, info in status.get('enhancers', {}).items():
+        if info.get('available', False):
+            enhancer_config = config.get(name, {})
+            if current_anonymizer.set_enhancer_enabled(name, True, enhancer_config):
+                enabled_list.append(name)
+    
+    return jsonify({
+        'status': 'ok',
+        'enabled': enabled_list,
+        'message': f"{len(enabled_list)} enhancer(s) activé(s)"
+    })
+
+
+@api_bp.route('/enhancers/disable-all', methods=['POST'])
+def disable_all_enhancers():
+    """Désactive tous les enhancers."""
+    global current_anonymizer
+    
+    status = current_anonymizer.get_enhancers_status()
+    
+    for name in status.get('enhancers', {}).keys():
+        current_anonymizer.set_enhancer_enabled(name, False)
+    
+    return jsonify({
+        'status': 'ok',
+        'message': 'Tous les enhancers désactivés'
+    })

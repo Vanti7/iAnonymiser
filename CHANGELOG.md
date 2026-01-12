@@ -7,6 +7,124 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [3.2.0] - 2025-01-12
+
+### 🚀 Enhancers - Détection PII avancée avec libs externes
+
+Intégration de bibliothèques Python spécialisées pour améliorer significativement la détection des données sensibles.
+
+#### Nouveaux Enhancers
+
+##### Microsoft Presidio (`presidio`)
+- **Détection NER** : Utilise spaCy pour la reconnaissance d'entités nommées (noms, organisations, lieux)
+- **Patterns avancés** : Emails, téléphones, numéros de sécurité sociale (FR/US)
+- **Support multilingue** : Français et anglais
+- **Seuil de confiance** configurable
+- Installation : `pip install presidio-analyzer presidio-anonymizer`
+- Modèles spaCy requis : `python -m spacy download fr_core_news_sm en_core_web_sm`
+
+##### TLDExtract (`tldextract`)
+- **Extraction précise des domaines** : Utilise la Public Suffix List officielle
+- **Gestion des TLDs composés** : `co.uk`, `com.fr`, `github.io`, etc.
+- **Détection automatique** : Tous les nouveaux gTLDs supportés
+- **Cache intelligent** : Performance optimisée
+- Installation : `pip install tldextract`
+
+##### LLM Guard (`llm_guard`)
+- **Scanner PII** : Détection optimisée pour les prompts LLM
+- **Scanner Secrets** : Clés API, tokens, credentials
+- **Orienté sécurité** : Conçu pour protéger les entrées/sorties LLM
+- Installation : `pip install llm-guard`
+
+#### Architecture
+
+```
+enhancers/
+├── __init__.py          # Registry et factory
+├── base.py              # Classe de base abstraite
+├── presidio_enhancer.py # Microsoft Presidio
+├── tldextract_enhancer.py # Extraction domaines
+└── llm_guard_enhancer.py  # LLM Guard
+```
+
+#### API
+
+Nouveaux endpoints pour gérer les enhancers :
+- `GET /enhancers` : Liste tous les enhancers et leur statut
+- `POST /enhancers/<name>` : Configure et active/désactive un enhancer
+- `POST /enhancers/enable-all` : Active tous les enhancers disponibles
+- `POST /enhancers/disable-all` : Désactive tous les enhancers
+
+#### Configuration
+
+Dans `config/settings.py` :
+```python
+ENHANCERS = {
+    'presidio': {'enabled': False, 'confidence_threshold': 0.7},
+    'tldextract': {'enabled': True, 'confidence_threshold': 0.6},
+    'llm_guard': {'enabled': False, 'confidence_threshold': 0.7},
+}
+```
+
+#### Notes d'installation
+
+Installation minimale (sans enhancers) :
+```bash
+pip install flask gunicorn
+```
+
+Installation complète (avec tous les enhancers) :
+```bash
+pip install -r requirements.txt
+python -m spacy download fr_core_news_sm
+python -m spacy download en_core_web_sm
+```
+
+---
+
+## [3.1.1] - 2025-01-12
+
+### 🔍 Amélioration de la détection des hostnames
+
+- **Ajout de TLDs virtualisés** : support des domaines VMware et hyperviseurs
+  - VMware : `.esx`, `.esxi`, `.vmware`, `.vcenter`, `.vsphere`, `.vsan`
+  - Microsoft : `.hyperv`
+  - Autres : `.proxmox`, `.nutanix`, `.citrix`, `.xen`
+- Correction de la détection des hostnames comme `havas-esx-08.havas.esx`
+
+---
+
+## [3.1.0] - 2025-01-12
+
+### 🎨 Refonte de l'interface - Zone unifiée
+
+L'interface a été simplifiée pour une meilleure ergonomie.
+
+#### Zone d'édition unifiée
+- **Fusion des zones** : "Texte original", "Preview détections" et "Texte anonymisé" sont maintenant dans une seule zone
+- **Toggle à 3 onglets** :
+  - ✏️ **Édition** : pour entrer/modifier le texte
+  - 👁️ **Détection** : pour visualiser les données sensibles surlignées
+  - 🔒 **Anonymisé** : pour voir le résultat après anonymisation
+
+#### Améliorations UX
+- **Basculement automatique** : passage à l'onglet approprié après chaque action
+  - Après "Anonymiser" → onglet "Anonymisé"
+  - Après "Restaurer" → onglet "Édition"
+  - Après upload de fichier → onglet "Anonymisé"
+- **Indicateur visuel dynamique** : le dot de couleur et le label changent selon le mode actif
+- **Bouton "Télécharger"** déplacé dans les boutons d'action principaux
+
+#### Suppressions
+- Suppression de l'option "Vue empilée/côte à côte" (devenue obsolète avec la nouvelle interface)
+- Suppression de la zone output séparée en bas de page
+
+### 🔧 Technique
+- Transitions CSS fluides entre les modes
+- Meilleure gestion de la hauteur minimale des zones
+
+---
+
 ## [3.0.0] - 2025-01-08
 
 ### 🏗️ Refactorisation majeure - Architecture modulaire
