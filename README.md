@@ -2,44 +2,48 @@
 
 Application web pour anonymiser vos logs, fichiers de configuration et autres données sensibles avant de les partager avec une IA.
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![Version](https://img.shields.io/badge/version-3.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.12+-green)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 
 > 📋 Voir le [CHANGELOG](CHANGELOG.md) pour l'historique des versions
 
+---
+
 ## ✨ Fonctionnalités
 
-### Détection automatique
-- **Adresses IP** (IPv4 et IPv6 - toutes formes compressées)
-- **Adresses email**
-- **Noms de domaine / hostnames** (TLDs étendus)
-- **URLs**
-- **Chemins de fichiers** (Windows et Unix)
-- **UUIDs**
-- **Adresses MAC**
-- **Numéros de téléphone** (internationaux - FR, US, et plus)
-- **Clés API / Tokens / JWT** (OpenAI, GitHub, Slack, Google...)
-- **Numéros de carte bancaire** (avec validation Luhn)
-- **IBAN**
-- **Numéros de sécurité sociale** (FR et US)
-- **Clés privées**
-- **Connection strings**
-- **Dates**
-- **Noms d'utilisateurs** (u=xxx, user@ip, etc.) 🆕
-- **Noms de serveurs** (patterns Ansible, K8s, etc.) 🆕
+### 🔍 Détection automatique
 
-### Fonctionnalités avancées
-- 🔍 **Preview en temps réel** avec highlighting coloré
+| Catégorie | Types détectés |
+|-----------|----------------|
+| **Réseau** | IPv4, IPv6 (toutes formes), adresses MAC |
+| **Identité** | Emails, usernames, numéros de téléphone (FR/US/intl) |
+| **Infrastructure** | Hostnames, URLs, chemins Windows/Unix, noms de serveurs |
+| **Identifiants** | UUIDs, clés API, JWT, clés privées, connection strings |
+| **Finance** | Cartes bancaires (Luhn), IBAN, SSN (FR/US) |
+| **Données** | Dates, patterns personnalisés |
+
+### 🚀 Enhancers - Détection avancée (v3.2.0)
+
+Intégration de bibliothèques Python spécialisées pour une détection encore plus précise :
+
+| Enhancer | Description | Cas d'usage |
+|----------|-------------|-------------|
+| **Presidio** | NER via spaCy (Microsoft) | Noms de personnes, organisations, lieux |
+| **tldextract** | Public Suffix List officielle | Tous les TLDs (co.uk, com.fr, nouveaux gTLDs) |
+| **LLM Guard** | Scanners sécurité LLM | Secrets, PII dans les prompts |
+
+### ⚡ Fonctionnalités avancées
+
+- 🎨 **Interface unifiée** avec toggle Édition/Détection/Anonymisé
 - 📦 **8 Presets prédéfinis** (Ansible, Apache, K8s, AWS, etc.)
-- 👁️ **Vue côte-à-côte** ou empilée
+- 🔍 **Preview en temps réel** avec highlighting coloré
 - 💾 **Sauvegarde de session** persistante
 - 🔄 **Anonymisation cohérente** (même valeur = même placeholder)
 - ⚙️ **Patterns personnalisés** (regex)
 - 🛡️ **Liste de préservation**
 - 📥 **Export JSON/TXT** des mappings
 - ⚡ **Regex précompilées** pour des performances optimales
-- 🎯 **Système de priorité** intelligent pour éviter les faux positifs
 
 ---
 
@@ -49,7 +53,7 @@ Application web pour anonymiser vos logs, fichiers de configuration et autres do
 
 ```bash
 # Cloner le repo
-git clone <votre-repo>
+git clone https://github.com/Vanti7/iAnonymiser
 cd ianonymiser
 
 # Lancer l'application
@@ -91,28 +95,11 @@ labels:
   - "traefik.http.routers.ianonymiser.tls.certresolver=letsencrypt"
 ```
 
-### Commandes Docker utiles
-
-```bash
-# Voir les logs
-docker-compose logs -f
-
-# Redémarrer
-docker-compose restart
-
-# Mettre à jour (après un git pull)
-docker-compose up -d --build
-
-# Arrêter
-docker-compose down
-
-# Nettoyer les anciennes images
-docker image prune -f
-```
-
 ---
 
-## 💻 Installation locale (Développement)
+## 💻 Installation locale
+
+### Installation minimale
 
 ```bash
 # Créer un environnement virtuel
@@ -124,14 +111,74 @@ venv\Scripts\activate
 # Linux/Mac:
 source venv/bin/activate
 
-# Installer les dépendances
-pip install -r requirements.txt
+# Installer les dépendances de base
+pip install flask gunicorn
 
 # Lancer en mode développement
 python app.py
 ```
 
+### Installation complète (avec Enhancers)
+
+```bash
+# Installer toutes les dépendances
+pip install -r requirements.txt
+
+# Installer les modèles spaCy pour Presidio
+python -m spacy download fr_core_news_sm
+python -m spacy download en_core_web_sm
+```
+
 Ouvrez [http://localhost:5000](http://localhost:5000)
+
+---
+
+## 🔌 API Enhancers
+
+### Endpoints
+
+```bash
+# Lister les enhancers et leur statut
+GET /enhancers
+
+# Activer/désactiver un enhancer
+POST /enhancers/<name>
+{
+  "enabled": true,
+  "config": {
+    "confidence_threshold": 0.7,
+    "languages": ["fr", "en"]
+  }
+}
+
+# Activer tous les enhancers disponibles
+POST /enhancers/enable-all
+
+# Désactiver tous les enhancers
+POST /enhancers/disable-all
+```
+
+### Utilisation en Python
+
+```python
+from core import Anonymizer
+
+anon = Anonymizer()
+
+# Activer Presidio pour la détection NER
+anon.set_enhancer_enabled('presidio', True, {
+    'confidence_threshold': 0.7,
+    'languages': ['fr', 'en']
+})
+
+# Activer tldextract pour les domaines
+anon.set_enhancer_enabled('tldextract', True)
+
+# Vérifier le statut des enhancers
+print(anon.get_enhancers_status())
+
+result = anon.anonymize(mon_texte)
+```
 
 ---
 
@@ -139,8 +186,8 @@ Ouvrez [http://localhost:5000](http://localhost:5000)
 
 | Preset | Description | Patterns activés |
 |--------|-------------|------------------|
-| **Par défaut** | Configuration standard | IPs, emails, URLs, UUIDs, tokens, usernames, serveurs... |
-| **Ansible** 🆕 | Logs Ansible/SSH/Infrastructure | IPs, hostnames, chemins, usernames, serveurs |
+| **Par défaut** | Configuration standard | IPs, emails, URLs, UUIDs, tokens, usernames, serveurs |
+| **Ansible** | Logs Ansible/SSH/Infrastructure | IPs, hostnames, chemins, usernames, serveurs |
 | **Apache/Nginx** | Logs serveurs web | IPs, URLs, hostnames, usernames |
 | **Kubernetes** | Logs K8s et Docker | IPs, pods, namespaces, hostnames, serveurs |
 | **AWS CloudWatch** | Logs AWS | ARN, EC2, SG, VPC, access keys |
@@ -169,8 +216,14 @@ from core.anonymizer import anonymize_text
 result = anonymize_text("""
 Connection from 192.168.1.100
 User: john.doe@company.com
+Server: havas-esx-08.havas.esx
+Path: C:\\Users\\admin\\config.json
 """)
 print(result.anonymized_text)
+# Connection from [IP_001]
+# User: [EMAIL_001]
+# Server: [HOST_001]
+# Path: [PATH_001]
 
 # Avec un preset
 result = anonymize_text(log_text, preset="kubernetes")
@@ -197,6 +250,13 @@ ianonymiser/
 │   ├── models.py               # Enums (PatternType) et Dataclasses
 │   └── anonymizer.py           # Classe Anonymizer principale
 │
+├── enhancers/                  # 🚀 Enhancers de détection (v3.2.0)
+│   ├── __init__.py             # Registry et factory
+│   ├── base.py                 # Classe de base abstraite
+│   ├── presidio_enhancer.py    # Microsoft Presidio (NER)
+│   ├── tldextract_enhancer.py  # Extraction domaines/TLD
+│   └── llm_guard_enhancer.py   # LLM Guard (secrets/PII)
+│
 ├── patterns/                   # 🔍 Patterns de détection
 │   ├── base.py                 # Regex par défaut et préfixes
 │   └── colors.py               # Couleurs pour le highlighting
@@ -217,7 +277,7 @@ ianonymiser/
 │   └── routes.py
 │
 ├── config/                     # 📝 Configuration
-│   └── settings.py             # VERSION, Config classes
+│   └── settings.py             # VERSION, Config classes, Enhancers
 │
 ├── templates/
 │   └── index.html              # Interface web
@@ -257,6 +317,21 @@ Le preset sera automatiquement chargé au prochain démarrage.
 - ✅ Container Docker avec utilisateur non-root
 - ✅ Health checks intégrés
 - ✅ Limites de ressources configurables
+- ✅ Enhancers optionnels (fonctionnement dégradé si non installés)
+
+---
+
+## 📊 Dépendances
+
+### Requises
+- `flask>=3.0.0`
+- `gunicorn>=21.0.0`
+
+### Optionnelles (Enhancers)
+- `presidio-analyzer>=2.2.0` + `presidio-anonymizer>=2.2.0`
+- `tldextract>=5.1.0`
+- `llm-guard>=0.3.0`
+- Modèles spaCy : `fr_core_news_sm`, `en_core_web_sm`
 
 ---
 
