@@ -3,8 +3,8 @@ Enhancer basé sur Microsoft Presidio pour la détection NER avancée.
 Presidio utilise des modèles NER (spaCy) + regex pour détecter les PII.
 """
 
-from typing import List, Dict, Any, Optional
-from .base import BaseEnhancer, EnhancerResult, EnhancerConfig
+from typing import List, Dict, Any
+from .base import BaseEnhancer, EnhancerResult
 
 
 class PresidioEnhancer(BaseEnhancer):
@@ -29,7 +29,7 @@ class PresidioEnhancer(BaseEnhancer):
             return self._available
         
         try:
-            from presidio_analyzer import AnalyzerEngine
+            from presidio_analyzer import AnalyzerEngine  # noqa: F401
             self._available = True
         except ImportError:
             self._available = False
@@ -152,7 +152,7 @@ class PresidioEnhancer(BaseEnhancer):
                             "recognition_metadata": r.recognition_metadata if hasattr(r, 'recognition_metadata') else {}
                         }
                     ))
-            except Exception as e:
+            except Exception:
                 # Continuer avec les autres langues en cas d'erreur
                 continue
         

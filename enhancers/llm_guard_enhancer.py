@@ -29,7 +29,7 @@ class LLMGuardEnhancer(BaseEnhancer):
             return self._available
         
         try:
-            from llm_guard.input_scanners import Anonymize
+            from llm_guard.input_scanners import Anonymize  # noqa: F401
             self._available = True
         except ImportError:
             self._available = False

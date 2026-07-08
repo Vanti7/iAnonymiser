@@ -7,7 +7,6 @@ import io
 import json
 
 from core import Anonymizer, PatternType
-from patterns import PATTERN_COLORS
 from presets import PRESETS, get_presets
 
 # Blueprint pour les routes API
@@ -237,7 +236,7 @@ def upload_file():
         try:
             file.seek(0)
             content = file.read().decode('latin-1')
-        except:
+        except Exception:
             return jsonify({'error': 'Impossible de lire le fichier (encodage non supporté)'}), 400
     
     reset_mappings = request.form.get('reset_mappings', 'false') == 'true'

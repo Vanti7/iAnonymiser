@@ -35,7 +35,7 @@ class TLDExtractEnhancer(BaseEnhancer):
             return self._available
         
         try:
-            import tldextract
+            import tldextract  # noqa: F401
             self._available = True
         except ImportError:
             self._available = False
