@@ -1,0 +1,61 @@
+# ===========================================
+# iAnonymiser - Public demo instance
+# ===========================================
+#
+# Hardened compose file for exposing a public, rate-limited demo behind an
+# existing Traefik reverse proxy (external network "traefik", certresolver
+# "gandi" already configured on that Traefik instance).
+#
+# Usage:
+#   docker-compose -f docker-compose.demo.yml up -d
+#
+# Requirements on the host:
+#   - A running Traefik instance attached to the "traefik" external network
+#   - DNS record for anonymiser.aetheriscloud.fr pointing at this host
+# ===========================================
+
+version: '3.8'
+
+services:
+  ianonymiser-demo:
+    image: ghcr.io/vanti7/ianonymiser:latest
+    container_name: ianonymiser-demo
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+      - DEMO_MODE=true
+      - TZ=Europe/Paris
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+
+      - "traefik.http.routers.ianonymiser-demo.rule=Host(`anonymiser.aetheriscloud.fr`)"
+      - "traefik.http.routers.ianonymiser-demo.entrypoints=websecure"
+      - "traefik.http.routers.ianonymiser-demo.tls.certresolver=gandi"
+      - "traefik.http.services.ianonymiser-demo.loadbalancer.server.port=5000"
+
+      # Rate limiting: cap abuse on a publicly-reachable demo instance
+      - "traefik.http.routers.ianonymiser-demo.middlewares=ianonymiser-demo-ratelimit"
+      - "traefik.http.middlewares.ianonymiser-demo-ratelimit.ratelimit.average=10"
+      - "traefik.http.middlewares.ianonymiser-demo-ratelimit.ratelimit.burst=20"
+      - "traefik.http.middlewares.ianonymiser-demo-ratelimit.ratelimit.period=1m"
+
+networks:
+  traefik:
+    external: true
