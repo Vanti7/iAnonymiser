@@ -26,7 +26,7 @@ Anonymization is one-way in most tools. iAnonymiser keeps a mapping table so the
 
 ```bash
 # 1. Anonymize the log before sending it to an LLM
-$ python cli.py anonymize app.log
+$ anonymize app.log
 Connection from [IP_001] user=[EMAIL_001]
 Server: [HOST_001]
 API key: [KEY_001]
@@ -37,7 +37,7 @@ iAnonymiser: 4 value(s) replaced. Mapping saved to app.log.mapping.json
 
 # 3. De-anonymize the LLM's answer to restore the real values
 $ echo "The issue is on [HOST_001], likely a firewall rule blocking [IP_001]." \
-    | python cli.py deanonymize - --mapping app.log.mapping.json
+    | deanonymize - --mapping app.log.mapping.json
 The issue is on prod-web-03.internal.corp, likely a firewall rule blocking 192.168.1.42.
 ```
 
@@ -61,23 +61,21 @@ Open [http://localhost:5000](http://localhost:5000).
 
 ```bash
 docker run --rm -v "$PWD":/data ghcr.io/vanti7/ianonymiser:latest \
-  python cli.py anonymize /data/app.log -o /data/app.anon.log
+  anonymize /data/app.log -o /data/app.anon.log
 ```
 
-Or locally, without Docker:
+Or install it locally, without Docker or Flask:
 
 ```bash
 git clone https://github.com/Vanti7/iAnonymiser
 cd iAnonymiser
-python -m venv venv
-source venv/bin/activate  # venv\Scripts\activate on Windows
-pip install flask gunicorn  # only needed for the web UI, not the CLI
+pip install .
 
-python cli.py anonymize app.log --preset kubernetes -o app.anon.log
-python cli.py deanonymize llm_response.txt --mapping app.log.mapping.json
+anonymize app.log --preset kubernetes -o app.anon.log
+deanonymize llm_response.txt --mapping app.log.mapping.json
 ```
 
-`cli.py` only depends on the Python standard library and this repo's own `core` package — no Flask install required to use it standalone.
+The CLI only depends on the Python standard library and this repo's own `core` package — no Flask install required. If you'd rather not install anything, `python cli.py anonymize ...` / `python cli.py deanonymize ...` work the same way straight from a checkout.
 
 ### Docker Compose
 
@@ -195,7 +193,8 @@ original = anon.deanonymize(llm_response)
 ```
 ianonymiser/
 ├── app.py                      # Flask entry point (web UI + API)
-├── cli.py                      # CLI entry point
+├── cli.py                      # CLI entry point (anonymize/deanonymize)
+├── pyproject.toml              # Packaging: pip install . -> anonymize/deanonymize commands
 ├── core/                       # Anonymization engine
 │   ├── models.py               # Enums (PatternType) and dataclasses
 │   └── anonymizer.py           # Anonymizer class
