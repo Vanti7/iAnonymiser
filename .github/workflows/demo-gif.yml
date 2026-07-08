@@ -15,6 +15,7 @@ on:
       - 'docs/demo.tape'
       - 'docs/demo-source.txt'
       - 'cli.py'
+      - 'pyproject.toml'
       - 'core/**'
       - 'patterns/**'
       - 'presets/**'
@@ -49,6 +50,13 @@ jobs:
         # that no longer exists in their latest release, so it always fails
         # ("Error: Failed to install ffmpeg"). Installing the three tools
         # ourselves sidesteps that bug.
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install iAnonymiser (provides the anonymize/deanonymize commands)
+        run: pip install -e .
 
       - name: Render docs/demo.tape
         run: vhs docs/demo.tape
