@@ -8,7 +8,7 @@
 
 > 📋 See [CHANGELOG.md](CHANGELOG.md) for release history · 🇫🇷 [Version française](docs/README.fr.md)
 
-![demo](./docs/demo.gif)
+![iAnonymiser web UI](./docs/screenshot.png)
 
 ---
 
@@ -18,50 +18,70 @@ Pasting a raw log, Ansible playbook output, or `.env` file into ChatGPT/Claude t
 
 **iAnonymiser** detects and replaces that sensitive data with stable placeholders (`[IP_001]`, `[EMAIL_001]`, `[HOST_001]`...) locally, before the text ever leaves your machine. Once the LLM responds, you feed its answer back through iAnonymiser to restore the original values — the LLM never saw them.
 
+It ships as a web app (screenshot above), a CLI, and a Python library — pick whichever fits your workflow.
+
 ## Killer feature: reversible mapping
 
-Anonymization is one-way in most tools. iAnonymiser keeps an in-memory mapping table so the process can run in reverse:
+Anonymization is one-way in most tools. iAnonymiser keeps a mapping table so the process can run in reverse:
 
 ```bash
 # 1. Anonymize the log before sending it to an LLM
-curl -s -X POST http://localhost:5000/anonymize \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Connection from 192.168.1.42 user=jdupont@company.com\nServer: prod-web-03.internal.corp\nAPI key: sk-proj-AbCdEf1234567890"}' \
-  | jq -r .anonymized_text
-
-# → Connection from [IP_001] user=[EMAIL_001]
-# → Server: [HOST_001]
-# → API key: [KEY_001]
+$ python cli.py anonymize app.log
+Connection from [IP_001] user=[EMAIL_001]
+Server: [HOST_001]
+API key: [KEY_001]
+iAnonymiser: 4 value(s) replaced. Mapping saved to app.log.mapping.json
 
 # 2. Paste the anonymized text into any LLM, get a response back like:
 #    "The issue is on [HOST_001], likely a firewall rule blocking [IP_001]."
 
 # 3. De-anonymize the LLM's answer to restore the real values
-curl -s -X POST http://localhost:5000/deanonymize \
-  -H "Content-Type: application/json" \
-  -d '{"text": "The issue is on [HOST_001], likely a firewall rule blocking [IP_001]."}' \
-  | jq -r .original_text
-
-# → The issue is on prod-web-03.internal.corp, likely a firewall rule blocking 192.168.1.42.
+$ echo "The issue is on [HOST_001], likely a firewall rule blocking [IP_001]." \
+    | python cli.py deanonymize - --mapping app.log.mapping.json
+The issue is on prod-web-03.internal.corp, likely a firewall rule blocking 192.168.1.42.
 ```
 
-Same value always maps to the same placeholder within a session, so an LLM can reason about relationships between entities (e.g. "these two hosts share the same subnet") without ever seeing real data.
+![CLI demo](./docs/demo.gif)
+
+Same value always maps to the same placeholder within a session, so an LLM can reason about relationships between entities (e.g. "these two hosts share the same subnet") without ever seeing real data. The web UI and API expose the same mapping table for the same purpose (see [API reference](#api-reference)).
 
 ---
 
 ## Quick start
 
+### Web UI
+
 ```bash
 docker run -d --name ianonymiser -p 5000:5000 ghcr.io/vanti7/ianonymiser:latest
 ```
 
-Open [http://localhost:5000](http://localhost:5000), or use the API directly as shown above.
+Open [http://localhost:5000](http://localhost:5000).
 
-### Docker Compose
+### CLI
+
+```bash
+docker run --rm -v "$PWD":/data ghcr.io/vanti7/ianonymiser:latest \
+  python cli.py anonymize /data/app.log -o /data/app.anon.log
+```
+
+Or locally, without Docker:
 
 ```bash
 git clone https://github.com/Vanti7/iAnonymiser
 cd iAnonymiser
+python -m venv venv
+source venv/bin/activate  # venv\Scripts\activate on Windows
+pip install flask gunicorn  # only needed for the web UI, not the CLI
+
+python cli.py anonymize app.log --preset kubernetes -o app.anon.log
+python cli.py deanonymize llm_response.txt --mapping app.log.mapping.json
+```
+
+`cli.py` only depends on the Python standard library and this repo's own `core` package — no Flask install required to use it standalone.
+
+### Docker Compose
+
+```bash
 docker-compose up -d
 ```
 
@@ -72,17 +92,9 @@ docker pull ghcr.io/vanti7/ianonymiser:latest
 docker pull ghcr.io/vanti7/ianonymiser:v3.2.0
 ```
 
-### Local install (without Docker)
+### Enhancers (optional)
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # venv\Scripts\activate on Windows
-
-# Minimal (core anonymization only)
-pip install flask gunicorn
-python app.py
-
-# Full (with detection enhancers)
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm fr_core_news_sm
 ```
@@ -182,7 +194,8 @@ original = anon.deanonymize(llm_response)
 
 ```
 ianonymiser/
-├── app.py                      # Flask entry point
+├── app.py                      # Flask entry point (web UI + API)
+├── cli.py                      # CLI entry point
 ├── core/                       # Anonymization engine
 │   ├── models.py               # Enums (PatternType) and dataclasses
 │   └── anonymizer.py           # Anonymizer class
@@ -202,6 +215,7 @@ ianonymiser/
 ## Security notes
 
 - All processing happens locally; no data is sent to a third-party service by the anonymization engine itself.
+- The CLI (`cli.py`) runs as a plain local process with no network listener at all.
 - The Docker image runs as a non-root user and ships with a health check.
 - The API has no built-in authentication — treat it like any other exposed service and put it behind a reverse proxy / VPN / auth layer if reachable outside your LAN.
 - The bundled web UI loads fonts from Google Fonts (network request, no log content sent). Self-host the fonts if you need a fully air-gapped deployment.

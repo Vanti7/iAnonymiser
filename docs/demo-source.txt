@@ -1,4 +1,4 @@
-2026-07-08 09:14:22 [ERROR] Connection from 10.0.4.17 refused by firewall
-2026-07-08 09:14:23 [WARN]  Host db-prod-02.internal.corp did not respond to healthcheck
-2026-07-08 09:14:25 [INFO]  Retrying with fallback credentials user=jdupont@acme-corp.com
-2026-07-08 09:14:26 [ERROR] Auth failed, API key sk-proj-9fKp2XyzAbC1234567890 rejected
+Jul 08 09:14:22 [ERROR] Connection from 10.0.4.17 refused by firewall
+Jul 08 09:14:23 [WARN]  Host db-prod-02.internal.corp did not respond to healthcheck
+Jul 08 09:14:25 [INFO]  Retrying with fallback credentials user=jdupont@acme-corp.com
+Jul 08 09:14:26 [ERROR] Auth failed, API key sk-proj-9fKp2XyzAbC1234567890 rejected
