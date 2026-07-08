@@ -7,7 +7,7 @@ FROM python:3.12-slim
 # Métadonnées
 LABEL maintainer="folivanti"
 LABEL description="Application d'anonymisation de logs et fichiers sensibles"
-LABEL version="3.0"
+LABEL version="3.2.0"
 
 # Variables d'environnement
 ENV PYTHONDONTWRITEBYTECODE=1 \
