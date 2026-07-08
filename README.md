@@ -1,346 +1,218 @@
-# 🔐 iAnonymiser
+# iAnonymiser
 
-Application web pour anonymiser vos logs, fichiers de configuration et autres données sensibles avant de les partager avec une IA.
+**Sanitize your logs and configs before sharing them with AI — 100% local.**
 
-![Version](https://img.shields.io/badge/version-3.2.0-blue)
-![Python](https://img.shields.io/badge/python-3.12+-green)
-![Docker](https://img.shields.io/badge/docker-ready-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Container](https://img.shields.io/badge/container-ghcr.io%2Fvanti7%2Fianonymiser-blue?logo=docker)](https://github.com/Vanti7/iAnonymiser/pkgs/container/ianonymiser)
+[![CI](https://github.com/Vanti7/iAnonymiser/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanti7/iAnonymiser/actions/workflows/ci.yml)
 
-> 📋 Voir le [CHANGELOG](CHANGELOG.md) pour l'historique des versions
+> 📋 See [CHANGELOG.md](CHANGELOG.md) for release history · 🇫🇷 [Version française](docs/README.fr.md)
 
----
-
-## ✨ Fonctionnalités
-
-### 🔍 Détection automatique
-
-| Catégorie | Types détectés |
-|-----------|----------------|
-| **Réseau** | IPv4, IPv6 (toutes formes), adresses MAC |
-| **Identité** | Emails, usernames, numéros de téléphone (FR/US/intl) |
-| **Infrastructure** | Hostnames, URLs, chemins Windows/Unix, noms de serveurs |
-| **Identifiants** | UUIDs, clés API, JWT, clés privées, connection strings |
-| **Finance** | Cartes bancaires (Luhn), IBAN, SSN (FR/US) |
-| **Données** | Dates, patterns personnalisés |
-
-### 🚀 Enhancers - Détection avancée (v3.2.0)
-
-Intégration de bibliothèques Python spécialisées pour une détection encore plus précise :
-
-| Enhancer | Description | Cas d'usage |
-|----------|-------------|-------------|
-| **Presidio** | NER via spaCy (Microsoft) | Noms de personnes, organisations, lieux |
-| **tldextract** | Public Suffix List officielle | Tous les TLDs (co.uk, com.fr, nouveaux gTLDs) |
-| **LLM Guard** | Scanners sécurité LLM | Secrets, PII dans les prompts |
-
-### ⚡ Fonctionnalités avancées
-
-- 🎨 **Interface unifiée** avec toggle Édition/Détection/Anonymisé
-- 📦 **8 Presets prédéfinis** (Ansible, Apache, K8s, AWS, etc.)
-- 🔍 **Preview en temps réel** avec highlighting coloré
-- 💾 **Sauvegarde de session** persistante
-- 🔄 **Anonymisation cohérente** (même valeur = même placeholder)
-- ⚙️ **Patterns personnalisés** (regex)
-- 🛡️ **Liste de préservation**
-- 📥 **Export JSON/TXT** des mappings
-- ⚡ **Regex précompilées** pour des performances optimales
+![demo](./docs/demo.gif)
 
 ---
 
-## 🐳 Déploiement Docker (Recommandé)
+## Problem
 
-### Méthode rapide avec Docker Compose
+Pasting a raw log, Ansible playbook output, or `.env` file into ChatGPT/Claude to debug an issue also sends every internal IP, hostname, username, and API key it contains to a third-party service. Most of the time nobody checks first.
+
+**iAnonymiser** detects and replaces that sensitive data with stable placeholders (`[IP_001]`, `[EMAIL_001]`, `[HOST_001]`...) locally, before the text ever leaves your machine. Once the LLM responds, you feed its answer back through iAnonymiser to restore the original values — the LLM never saw them.
+
+## Killer feature: reversible mapping
+
+Anonymization is one-way in most tools. iAnonymiser keeps an in-memory mapping table so the process can run in reverse:
 
 ```bash
-# Cloner le repo
+# 1. Anonymize the log before sending it to an LLM
+curl -s -X POST http://localhost:5000/anonymize \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Connection from 192.168.1.42 user=jdupont@company.com\nServer: prod-web-03.internal.corp\nAPI key: sk-proj-AbCdEf1234567890"}' \
+  | jq -r .anonymized_text
+
+# → Connection from [IP_001] user=[EMAIL_001]
+# → Server: [HOST_001]
+# → API key: [KEY_001]
+
+# 2. Paste the anonymized text into any LLM, get a response back like:
+#    "The issue is on [HOST_001], likely a firewall rule blocking [IP_001]."
+
+# 3. De-anonymize the LLM's answer to restore the real values
+curl -s -X POST http://localhost:5000/deanonymize \
+  -H "Content-Type: application/json" \
+  -d '{"text": "The issue is on [HOST_001], likely a firewall rule blocking [IP_001]."}' \
+  | jq -r .original_text
+
+# → The issue is on prod-web-03.internal.corp, likely a firewall rule blocking 192.168.1.42.
+```
+
+Same value always maps to the same placeholder within a session, so an LLM can reason about relationships between entities (e.g. "these two hosts share the same subnet") without ever seeing real data.
+
+---
+
+## Quick start
+
+```bash
+docker run -d --name ianonymiser -p 5000:5000 ghcr.io/vanti7/ianonymiser:latest
+```
+
+Open [http://localhost:5000](http://localhost:5000), or use the API directly as shown above.
+
+### Docker Compose
+
+```bash
 git clone https://github.com/Vanti7/iAnonymiser
-cd ianonymiser
-
-# Lancer l'application
+cd iAnonymiser
 docker-compose up -d
-
-# Vérifier que ça tourne
-docker-compose ps
-docker-compose logs -f
 ```
 
-L'application sera disponible sur **http://votre-serveur:5000**
-
-### Méthode manuelle avec Docker
+### Pull a specific version
 
 ```bash
-# Construire l'image
-docker build -t ianonymiser:latest .
-
-# Lancer le container
-docker run -d \
-  --name ianonymiser \
-  --restart unless-stopped \
-  -p 5000:5000 \
-  ianonymiser:latest
-
-# Vérifier les logs
-docker logs -f ianonymiser
+docker pull ghcr.io/vanti7/ianonymiser:latest
+docker pull ghcr.io/vanti7/ianonymiser:v3.2.0
 ```
 
-### Avec un reverse proxy (Traefik)
-
-Décommentez les labels dans `docker-compose.yml` et adaptez le domaine :
-
-```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.ianonymiser.rule=Host(`anonymiser.votredomaine.com`)"
-  - "traefik.http.routers.ianonymiser.entrypoints=websecure"
-  - "traefik.http.routers.ianonymiser.tls.certresolver=letsencrypt"
-```
-
----
-
-## 💻 Installation locale
-
-### Installation minimale
+### Local install (without Docker)
 
 ```bash
-# Créer un environnement virtuel
 python -m venv venv
+source venv/bin/activate  # venv\Scripts\activate on Windows
 
-# Activer l'environnement
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# Installer les dépendances de base
+# Minimal (core anonymization only)
 pip install flask gunicorn
-
-# Lancer en mode développement
 python app.py
-```
 
-### Installation complète (avec Enhancers)
-
-```bash
-# Installer toutes les dépendances
+# Full (with detection enhancers)
 pip install -r requirements.txt
-
-# Installer les modèles spaCy pour Presidio
-python -m spacy download fr_core_news_sm
-python -m spacy download en_core_web_sm
+python -m spacy download en_core_web_sm fr_core_news_sm
 ```
-
-Ouvrez [http://localhost:5000](http://localhost:5000)
 
 ---
 
-## 🔌 API Enhancers
+## Presets
 
-### Endpoints
+Each preset enables a curated set of detection patterns for a given log type.
+
+| Preset | Use case | Patterns enabled |
+|---|---|---|
+| `default` | General purpose | IPs, emails, URLs, UUIDs, tokens, usernames, server names |
+| `ansible` | Ansible / SSH / infrastructure logs | IPs, hostnames, paths, usernames, server names |
+| `apache` | Apache/Nginx access & error logs | IPs, URLs, hostnames, usernames |
+| `kubernetes` | Kubernetes & Docker logs | IPs, pod/namespace names, hostnames, server names |
+| `aws` | AWS CloudWatch logs | ARNs, EC2/SG/VPC IDs, access keys |
+| `database` | SQL logs | IPs, connection strings, hostnames |
+| `security` | Paranoid mode | Every pattern enabled |
+| `minimal` | IPs and emails only | IPs, emails |
 
 ```bash
-# Lister les enhancers et leur statut
-GET /enhancers
-
-# Activer/désactiver un enhancer
-POST /enhancers/<name>
-{
-  "enabled": true,
-  "config": {
-    "confidence_threshold": 0.7,
-    "languages": ["fr", "en"]
-  }
-}
-
-# Activer tous les enhancers disponibles
-POST /enhancers/enable-all
-
-# Désactiver tous les enhancers
-POST /enhancers/disable-all
+curl -s -X POST http://localhost:5000/load-preset \
+  -H "Content-Type: application/json" -d '{"preset": "kubernetes"}'
 ```
 
-### Utilisation en Python
+You can also define custom presets as JSON files in `presets/` — see `presets/preset.json.example`.
+
+---
+
+## Detection coverage
+
+| Category | Types |
+|---|---|
+| Network | IPv4, IPv6 (all forms), MAC addresses |
+| Identity | Emails, usernames, phone numbers (FR/US/intl) |
+| Infrastructure | Hostnames, URLs, Windows/Unix paths, server names |
+| Credentials | UUIDs, API keys, JWTs, private keys, connection strings |
+| Finance | Credit cards (Luhn-validated), IBAN, SSN (FR/US) |
+| Other | Dates, custom regex patterns |
+
+### Enhancers (optional, disabled by default except tldextract)
+
+| Enhancer | Backing library | Adds |
+|---|---|---|
+| `presidio` | Microsoft Presidio (spaCy NER) | Person names, organizations, locations |
+| `tldextract` | Public Suffix List | Accurate TLD/domain parsing (`co.uk`, new gTLDs...) |
+| `llm_guard` | LLM Guard | Secret/PII scanners tuned for LLM prompts |
+
+```bash
+curl -s -X POST http://localhost:5000/enhancers/presidio \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true, "config": {"confidence_threshold": 0.7, "languages": ["en"]}}'
+```
+
+Enhancers degrade gracefully: if their dependency isn't installed, they simply report as unavailable instead of failing.
+
+---
+
+## API reference
+
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/preview` | Highlight detections without replacing them |
+| `POST` | `/anonymize` | Anonymize text, returns mappings + stats |
+| `POST` | `/deanonymize` | Restore original values from placeholders |
+| `POST` | `/reset` | Clear the current mapping table |
+| `POST` | `/load-preset` | Load a named preset |
+| `GET` | `/presets` | List available presets |
+| `POST` | `/upload` | Anonymize an uploaded file |
+| `GET` | `/export-mappings?format=json\|text` | Export the mapping table |
+| `POST` | `/import-mappings` | Re-import a previously exported mapping table |
+| `GET` | `/enhancers` | List enhancers and their status |
+| `POST` | `/enhancers/<name>` | Configure/toggle an enhancer |
+| `POST` | `/enhancers/enable-all` | Enable all available enhancers |
+| `POST` | `/enhancers/disable-all` | Disable all enhancers |
+
+### Python usage
 
 ```python
 from core import Anonymizer
 
 anon = Anonymizer()
-
-# Activer Presidio pour la détection NER
-anon.set_enhancer_enabled('presidio', True, {
-    'confidence_threshold': 0.7,
-    'languages': ['fr', 'en']
-})
-
-# Activer tldextract pour les domaines
-anon.set_enhancer_enabled('tldextract', True)
-
-# Vérifier le statut des enhancers
-print(anon.get_enhancers_status())
-
-result = anon.anonymize(mon_texte)
-```
-
----
-
-## 📦 Presets disponibles
-
-| Preset | Description | Patterns activés |
-|--------|-------------|------------------|
-| **Par défaut** | Configuration standard | IPs, emails, URLs, UUIDs, tokens, usernames, serveurs |
-| **Ansible** | Logs Ansible/SSH/Infrastructure | IPs, hostnames, chemins, usernames, serveurs |
-| **Apache/Nginx** | Logs serveurs web | IPs, URLs, hostnames, usernames |
-| **Kubernetes** | Logs K8s et Docker | IPs, pods, namespaces, hostnames, serveurs |
-| **AWS CloudWatch** | Logs AWS | ARN, EC2, SG, VPC, access keys |
-| **Base de données** | Logs SQL | IPs, connection strings, hostnames |
-| **Audit Sécurité** | Mode paranoïaque | TOUS les patterns |
-| **Minimal** | Essentiel uniquement | IPs et emails |
-
----
-
-## ⌨️ Raccourcis clavier
-
-| Raccourci | Action |
-|-----------|--------|
-| `Ctrl + Enter` | Anonymiser |
-| `Ctrl + Shift + C` | Copier le résultat |
-
----
-
-## 🔧 Utilisation CLI
-
-```python
-from core import Anonymizer, PatternType
-from core.anonymizer import anonymize_text
-
-# Utilisation simple
-result = anonymize_text("""
-Connection from 192.168.1.100
-User: john.doe@company.com
-Server: havas-esx-08.havas.esx
-Path: C:\\Users\\admin\\config.json
-""")
-print(result.anonymized_text)
-# Connection from [IP_001]
-# User: [EMAIL_001]
-# Server: [HOST_001]
-# Path: [PATH_001]
-
-# Avec un preset
-result = anonymize_text(log_text, preset="kubernetes")
-
-# Utilisation avancée
-anon = Anonymizer()
-anon.load_preset("aws")
+anon.load_preset("kubernetes")
 anon.add_preserve_value("localhost")
-anon.add_custom_pattern(r'SRV-[A-Z0-9]+', 'SERVER')
+anon.add_custom_pattern(r"SRV-[A-Z0-9]+", "SERVER")
 
-result = anon.anonymize(mon_texte)
-original = anon.deanonymize(result.anonymized_text)
+result = anon.anonymize(my_text)
+print(result.anonymized_text)
+
+original = anon.deanonymize(llm_response)
 ```
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ianonymiser/
-├── app.py                      # Point d'entrée Flask
-│
-├── core/                       # 🧠 Moteur d'anonymisation
-│   ├── models.py               # Enums (PatternType) et Dataclasses
-│   └── anonymizer.py           # Classe Anonymizer principale
-│
-├── enhancers/                  # 🚀 Enhancers de détection (v3.2.0)
-│   ├── __init__.py             # Registry et factory
-│   ├── base.py                 # Classe de base abstraite
+├── app.py                      # Flask entry point
+├── core/                       # Anonymization engine
+│   ├── models.py               # Enums (PatternType) and dataclasses
+│   └── anonymizer.py           # Anonymizer class
+├── enhancers/                  # Optional detection enhancers
 │   ├── presidio_enhancer.py    # Microsoft Presidio (NER)
-│   ├── tldextract_enhancer.py  # Extraction domaines/TLD
+│   ├── tldextract_enhancer.py  # Domain/TLD extraction
 │   └── llm_guard_enhancer.py   # LLM Guard (secrets/PII)
-│
-├── patterns/                   # 🔍 Patterns de détection
-│   ├── base.py                 # Regex par défaut et préfixes
-│   └── colors.py               # Couleurs pour le highlighting
-│
-├── presets/                    # ⚙️ Presets en JSON
-│   ├── loader.py               # Chargeur dynamique de presets
-│   ├── default.json            # Preset par défaut
-│   ├── ansible.json            # Preset Ansible/Infrastructure
-│   ├── apache.json             # Preset Apache/Nginx
-│   ├── aws.json                # Preset AWS CloudWatch
-│   ├── database.json           # Preset Base de données
-│   ├── kubernetes.json         # Preset Kubernetes
-│   ├── minimal.json            # Preset minimal
-│   ├── security.json           # Preset Audit Sécurité
-│   └── preset.json.example     # Template pour créer un preset
-│
-├── api/                        # 🌐 Routes API Flask
-│   └── routes.py
-│
-├── config/                     # 📝 Configuration
-│   └── settings.py             # VERSION, Config classes, Enhancers
-│
-├── templates/
-│   └── index.html              # Interface web
-│
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── CHANGELOG.md
-└── README.md
+├── patterns/                   # Regex patterns and highlight colors
+├── presets/                    # JSON preset definitions + loader
+├── api/                        # Flask API blueprint
+├── config/                     # App configuration
+└── templates/index.html        # Web UI
 ```
 
-### Créer un preset personnalisé
+---
 
-Créez un fichier JSON dans `presets/` en suivant ce template :
+## Security notes
 
-```json
-{
-    "id": "mon_preset",
-    "name": "Mon Preset",
-    "description": "Description du preset",
-    "patterns": ["ipv4", "email", "hostname"],
-    "preserve": ["localhost"],
-    "custom_patterns": [
-        {"regex": "MON-PATTERN-[0-9]+", "prefix": "CUSTOM"}
-    ]
-}
-```
-
-Le preset sera automatiquement chargé au prochain démarrage.
+- All processing happens locally; no data is sent to a third-party service by the anonymization engine itself.
+- The Docker image runs as a non-root user and ships with a health check.
+- The API has no built-in authentication — treat it like any other exposed service and put it behind a reverse proxy / VPN / auth layer if reachable outside your LAN.
+- The bundled web UI loads fonts from Google Fonts (network request, no log content sent). Self-host the fonts if you need a fully air-gapped deployment.
+- See [`docker-compose.demo.yml`](docker-compose.demo.yml) for a hardened configuration (payload size cap, no disk persistence, per-request isolation) intended for running a public demo instance.
 
 ---
 
-## 🔒 Sécurité
+## Contributing
 
-- ✅ Toutes les données sont traitées **localement**
-- ✅ Aucune donnée n'est envoyée à un serveur externe
-- ✅ Container Docker avec utilisateur non-root
-- ✅ Health checks intégrés
-- ✅ Limites de ressources configurables
-- ✅ Enhancers optionnels (fonctionnement dégradé si non installés)
+Issues and PRs are welcome.
 
----
+## License
 
-## 📊 Dépendances
-
-### Requises
-- `flask>=3.0.0`
-- `gunicorn>=21.0.0`
-
-### Optionnelles (Enhancers)
-- `presidio-analyzer>=2.2.0` + `presidio-anonymizer>=2.2.0`
-- `tldextract>=5.1.0`
-- `llm-guard>=0.3.0`
-- Modèles spaCy : `fr_core_news_sm`, `en_core_web_sm`
-
----
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une PR.
-
----
-
-## 📝 Licence
-
-MIT License - Utilisez librement !
+MIT — see [LICENSE](LICENSE).
