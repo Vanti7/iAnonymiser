@@ -1,9 +1,12 @@
 name: Demo GIF
 
 # Regenerates docs/demo.gif whenever anything that could change what the
-# recording shows is touched (the tape itself, or the anonymization
-# engine/API/image it drives against), and opens a PR with the result
+# recording shows is touched (the tape itself, its input fixture, or the
+# anonymization engine/CLI it drives), and opens a PR with the result
 # instead of pushing to master directly (master requires CODEOWNERS review).
+#
+# The tape drives cli.py directly against core.Anonymizer, so this job needs
+# no Docker build/Flask server — just the Python stdlib and the repo itself.
 
 on:
   push:
@@ -11,14 +14,11 @@ on:
     paths:
       - 'docs/demo.tape'
       - 'docs/demo-source.txt'
+      - 'cli.py'
       - 'core/**'
       - 'patterns/**'
       - 'presets/**'
       - 'enhancers/**'
-      - 'api/**'
-      - 'app.py'
-      - 'Dockerfile'
-      - 'requirements.txt'
   workflow_dispatch: {}
 
 permissions:
@@ -50,31 +50,8 @@ jobs:
         # ("Error: Failed to install ffmpeg"). Installing the three tools
         # ourselves sidesteps that bug.
 
-      - name: Build image
-        run: docker build -t ianonymiser:demo-gif .
-
-      - name: Start container
-        run: docker run -d --name ianonymiser -p 5000:5000 ianonymiser:demo-gif
-
-      - name: Wait for the app to be ready
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:5000/ > /dev/null; then
-              echo "App is up"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "App did not become ready in time" >&2
-          docker logs ianonymiser
-          exit 1
-
       - name: Render docs/demo.tape
         run: vhs docs/demo.tape
-
-      - name: Stop container
-        if: always()
-        run: docker rm -f ianonymiser
 
       - name: Open PR with the regenerated GIF
         uses: peter-evans/create-pull-request@v7
