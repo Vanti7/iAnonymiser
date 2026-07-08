@@ -38,12 +38,17 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Copier le code source
 COPY app.py .
 COPY cli.py .
+COPY pyproject.toml .
 COPY core/ core/
 COPY patterns/ patterns/
 COPY presets/ presets/
+COPY enhancers/ enhancers/
 COPY api/ api/
 COPY config/ config/
 COPY templates/ templates/
+
+# Installer le CLI comme package (fournit les commandes "anonymize"/"deanonymize")
+RUN pip install --no-cache-dir .
 
 # Changer les permissions
 RUN chown -R ianonymiser:ianonymiser /app
