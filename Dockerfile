@@ -37,6 +37,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 
 # Copier le code source
 COPY app.py .
+COPY cli.py .
 COPY core/ core/
 COPY patterns/ patterns/
 COPY presets/ presets/
