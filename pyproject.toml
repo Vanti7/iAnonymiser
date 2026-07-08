@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ianonymiser"
+version = "3.2.0"
+description = "Sanitize logs and configs locally before sharing them with an LLM."
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+authors = [{name = "Florent Olivanti"}]
+
+[project.urls]
+Homepage = "https://github.com/Vanti7/iAnonymiser"
+
+[project.scripts]
+anonymize = "cli:anonymize_main"
+deanonymize = "cli:deanonymize_main"
+
+[tool.setuptools]
+py-modules = ["cli"]
+packages = ["core", "patterns", "presets", "enhancers"]

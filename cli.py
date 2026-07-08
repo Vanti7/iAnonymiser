@@ -5,10 +5,14 @@ Command-line interface for iAnonymiser.
 Works directly against the anonymization engine (core.Anonymizer) — no
 running server required.
 
-Examples:
+Once installed (`pip install .`), use the standalone commands:
+    anonymize app.log
+    anonymize app.log -o app.anon.log --preset kubernetes
+    cat app.log | anonymize - > app.anon.log
+    deanonymize llm_response.txt --mapping app.log.mapping.json
+
+Without installing, run this file directly instead:
     python cli.py anonymize app.log
-    python cli.py anonymize app.log -o app.anon.log --preset kubernetes
-    cat app.log | python cli.py anonymize - > app.anon.log
     python cli.py deanonymize llm_response.txt --mapping app.log.mapping.json
 """
 
@@ -30,6 +34,20 @@ def _write_output(path: str, content: str) -> None:
         Path(path).write_text(content, encoding='utf-8')
     else:
         sys.stdout.write(content)
+
+
+def _add_anonymize_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('input', help="Input file, or '-' for stdin")
+    parser.add_argument('-o', '--output', help='Output file (default: stdout)')
+    parser.add_argument('--preset', help='Preset to load (e.g. kubernetes, ansible, aws, security, minimal)')
+    parser.add_argument('--preserve', action='append', default=[], help='Value to never anonymize (repeatable)')
+    parser.add_argument('--mapping-out', help='Where to save the mapping file (default: <input>.mapping.json)')
+
+
+def _add_deanonymize_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('input', help="Input file (e.g. an LLM response), or '-' for stdin")
+    parser.add_argument('--mapping', required=True, help="Mapping file produced by 'anonymize'")
+    parser.add_argument('-o', '--output', help='Output file (default: stdout)')
 
 
 def cmd_anonymize(args: argparse.Namespace) -> None:
@@ -64,7 +82,28 @@ def cmd_deanonymize(args: argparse.Namespace) -> None:
     _write_output(args.output, anon.deanonymize(text))
 
 
+def anonymize_main() -> None:
+    """Entry point for the standalone `anonymize` command."""
+    parser = argparse.ArgumentParser(
+        prog='anonymize',
+        description='Replace sensitive data with placeholders (iAnonymiser).',
+    )
+    _add_anonymize_args(parser)
+    cmd_anonymize(parser.parse_args())
+
+
+def deanonymize_main() -> None:
+    """Entry point for the standalone `deanonymize` command."""
+    parser = argparse.ArgumentParser(
+        prog='deanonymize',
+        description='Restore original values using a mapping file (iAnonymiser).',
+    )
+    _add_deanonymize_args(parser)
+    cmd_deanonymize(parser.parse_args())
+
+
 def main() -> None:
+    """Entry point for `python cli.py <anonymize|deanonymize> ...` (no install required)."""
     parser = argparse.ArgumentParser(
         prog='ianonymiser',
         description='Sanitize logs/configs locally before sharing them with an LLM.',
@@ -72,17 +111,11 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     p_anon = subparsers.add_parser('anonymize', help='Replace sensitive data with placeholders')
-    p_anon.add_argument('input', help="Input file, or '-' for stdin")
-    p_anon.add_argument('-o', '--output', help='Output file (default: stdout)')
-    p_anon.add_argument('--preset', help='Preset to load (e.g. kubernetes, ansible, aws, security, minimal)')
-    p_anon.add_argument('--preserve', action='append', default=[], help='Value to never anonymize (repeatable)')
-    p_anon.add_argument('--mapping-out', help='Where to save the mapping file (default: <input>.mapping.json)')
+    _add_anonymize_args(p_anon)
     p_anon.set_defaults(func=cmd_anonymize)
 
     p_dean = subparsers.add_parser('deanonymize', help='Restore original values using a mapping file')
-    p_dean.add_argument('input', help="Input file (e.g. an LLM response), or '-' for stdin")
-    p_dean.add_argument('--mapping', required=True, help="Mapping file produced by 'anonymize'")
-    p_dean.add_argument('-o', '--output', help='Output file (default: stdout)')
+    _add_deanonymize_args(p_dean)
     p_dean.set_defaults(func=cmd_deanonymize)
 
     args = parser.parse_args()
